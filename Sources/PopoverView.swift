@@ -95,16 +95,16 @@ struct PopoverView: View {
     // MARK: - States
 
     private var idleView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 28))
+                .font(.system(size: 20))
                 .foregroundStyle(.quaternary)
             Text("Copy some text to get started")
-                .font(.subheadline)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 30)
+        .padding(.vertical, 16)
     }
 
     private func loadingView(action: String) -> some View {

@@ -33,7 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             historyStore: historyStore
         )
         popover = NSPopover()
-        popover.contentViewController = NSHostingController(rootView: popoverView)
+        let hostingController = NSHostingController(rootView: popoverView)
+        hostingController.view.setFrameSize(NSSize(width: 320, height: 1))  // width fixed, height auto
+        popover.contentViewController = hostingController
         popover.behavior = .transient
 
         // Create menu bar item
