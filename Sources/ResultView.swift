@@ -37,12 +37,14 @@ struct ResultView: View {
                 Text("BEFORE")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.tertiary)
-                Text(original)
-                    .font(.system(.caption, design: .monospaced))
-                    .lineLimit(3)
-                    .truncationMode(.tail)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollView {
+                    Text(original)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 150)
             }
             .padding(10)
             .background(Color.red.opacity(0.04))
@@ -62,7 +64,7 @@ struct ResultView: View {
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(minHeight: 40, maxHeight: 200)
+                .frame(maxHeight: 300)
             }
             .padding(10)
             .background(Color.green.opacity(0.04))

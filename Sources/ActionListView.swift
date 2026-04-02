@@ -30,12 +30,13 @@ struct ActionListView: View {
                         .foregroundStyle(TokenEstimator.isTooLong(text) ? Color.red : Color.secondary)
                 }
 
-                Text(text)
-                    .font(.system(.caption, design: .monospaced))
-                    .lineLimit(3)
-                    .truncationMode(.tail)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollView {
+                    Text(text)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 150)
             }
             .padding(10)
             .background(Color(.textBackgroundColor).opacity(0.5))
