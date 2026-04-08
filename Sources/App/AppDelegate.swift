@@ -134,11 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         clipboardService.start()
         viewModel.refreshFromClipboard()
 
-        // On first launch with an empty clipboard, seed an example so there's
-        // something to try immediately.
-        if viewModel.history.isEmpty && viewModel.clipboardText.isEmpty {
-            viewModel.setClipboardText("apfel-clip example — Copy any text, code, or error message. Press \u{2318}\u{21E7}V and pick an action: Fix Grammar, Summarise, Explain Code, and more. On-device AI, no API keys needed.")
-        }
+        viewModel.seedWelcomeClipboardIfNeeded()
 
         let controlAPI = ClipControlAPI(viewModel: viewModel, presenter: self)
         let controlServer = ClipControlServer(api: controlAPI)

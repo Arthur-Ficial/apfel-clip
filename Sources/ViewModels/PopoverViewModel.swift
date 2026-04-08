@@ -158,6 +158,13 @@ final class PopoverViewModel {
         refreshFromClipboard()
     }
 
+    /// Seeds the clipboard with a welcome example when the user has never used the app
+    /// (no history) and the clipboard is currently empty. Safe to call on every launch.
+    func seedWelcomeClipboardIfNeeded() {
+        guard history.isEmpty && clipboardText.isEmpty else { return }
+        setClipboardText("apfel-clip example — Copy any text, code, or error message. Press \u{2318}\u{21E7}V and pick an action: Fix Grammar, Summarise, Explain Code, and more. On-device AI, no API keys needed.")
+    }
+
     func selectPrimaryPanel(_ panel: ClipPrimaryPanel) async {
         settings.preferredPanel = panel
         await persistSettings()

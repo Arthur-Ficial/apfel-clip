@@ -158,4 +158,43 @@ struct PopoverViewModelTests {
         #expect(loaded.launchAtLoginEnabled == false)
         #expect(loaded.launchAtLoginPromptShown == true)
     }
+
+    // MARK: - Welcome clipboard seed
+
+    @Test("seedWelcomeClipboardIfNeeded seeds example text when history and clipboard are empty")
+    func seedWelcomeClipboardWhenEmpty() {
+        let (viewModel, _, clipboard, _, _, _) = makeViewModel()
+        // No history loaded, clipboard is empty — fresh install.
+        viewModel.seedWelcomeClipboardIfNeeded()
+
+        #expect(!viewModel.clipboardText.isEmpty)
+        #expect(viewModel.clipboardText.contains("apfel-clip"))
+        #expect(clipboard.setTextCalls.count == 1)
+    }
+
+    @Test("seedWelcomeClipboardIfNeeded does nothing when clipboard already has text")
+    func seedWelcomeClipboardSkipsWhenClipboardHasContent() {
+        let (viewModel, _, clipboard, _, _, _) = makeViewModel()
+        clipboard.currentText = "some existing text"
+        viewModel.refreshFromClipboard()
+
+        viewModel.seedWelcomeClipboardIfNeeded()
+
+        #expect(clipboard.setTextCalls.isEmpty)
+        #expect(viewModel.clipboardText == "some existing text")
+    }
+
+    @Test("seedWelcomeClipboardIfNeeded does nothing when history exists")
+    func seedWelcomeClipboardSkipsWhenHistoryExists() async throws {
+        let (viewModel, _, clipboard, historyStore, _, _) = makeViewModel()
+        try await historyStore.save([
+            ClipHistoryEntry(actionID: "fix-grammar", actionName: "Fix grammar", input: "old", output: "new")
+        ])
+        await viewModel.loadPersistedState()
+        // Clipboard is empty but history is non-empty — returning user.
+
+        viewModel.seedWelcomeClipboardIfNeeded()
+
+        #expect(clipboard.setTextCalls.isEmpty)
+    }
 }
