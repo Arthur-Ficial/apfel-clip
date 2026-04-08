@@ -556,33 +556,34 @@ struct PopoverRootView: View {
 
                 // ── Result (large, primary, fills remaining space) ──────────
                 SurfaceCard(fillAvailableHeight: true) {
+                    let isInClipboard = viewModel.clipboardText.trimmingCharacters(in: .whitespacesAndNewlines) == result.output
+                    let green = Color(red: 0.16, green: 0.49, blue: 0.22)
                     VStack(alignment: .leading, spacing: 10) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Text("Result")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                             Spacer()
-                            if result.copiedToClipboard {
-                                Label("Already in clipboard", systemImage: "checkmark.circle.fill")
+                            if isInClipboard {
+                                Label("In clipboard", systemImage: "checkmark.circle.fill")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                                    .foregroundStyle(green)
                             }
                             Button {
                                 viewModel.copyCurrentResult()
                             } label: {
-                                Label(result.copiedToClipboard ? "Copy again" : "Copy", systemImage: "doc.on.doc")
-                                    .font(.caption.weight(.semibold))
+                                Label(isInClipboard ? "Copy again" : "Copy", systemImage: "doc.on.doc")
                             }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.secondary)
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
                         }
 
-                        ScrollView {
-                            Text(result.output)
-                                .font(.body)
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(12)
+                        TextEditor(text: Binding(
+                            get: { result.output },
+                            set: { viewModel.result?.output = $0 }
+                        ))
+                        .font(.body)
+                        .scrollContentBackground(.hidden)
+                        .padding(8)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(Color.white.opacity(0.9))

@@ -252,13 +252,10 @@ final class PopoverViewModel {
             actionName: entry.actionName,
             input: entry.input,
             output: entry.output,
-            copiedToClipboard: true,
+            copiedToClipboard: false,
             createdFromHistory: true
         )
-        clipboardService.setText(entry.output)
-        clipboardText = entry.output
-        contentType = ContentDetector.detect(entry.output)
-        banner = ClipBanner(style: .success, title: "Copied from history", detail: entry.actionName)
+        banner = nil
         screen = .result
     }
 

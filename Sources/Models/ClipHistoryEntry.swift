@@ -29,7 +29,7 @@ struct ClipResultState: Equatable, Sendable {
     let actionID: String
     let actionName: String
     let input: String
-    let output: String
+    var output: String
     var copiedToClipboard: Bool
     var createdFromHistory: Bool
 }
