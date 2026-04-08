@@ -69,9 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         guard let event = NSApp.currentEvent else { return }
         if event.type == .rightMouseUp {
             let menu = buildContextMenu()
-            sender.menu = menu
-            sender.performClick(nil)
-            sender.menu = nil
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
         } else {
             togglePopover(sender)
         }
@@ -135,6 +133,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         viewModel.attachClipboardListener()
         clipboardService.start()
         viewModel.refreshFromClipboard()
+
+        // On first launch with an empty clipboard, seed an example so there's
+        // something to try immediately.
+        if viewModel.history.isEmpty && viewModel.clipboardText.isEmpty {
+            viewModel.setClipboardText("apfel-clip example — Copy any text, code, or error message. Press \u{2318}\u{21E7}V and pick an action: Fix Grammar, Summarise, Explain Code, and more. On-device AI, no API keys needed.")
+        }
 
         let controlAPI = ClipControlAPI(viewModel: viewModel, presenter: self)
         let controlServer = ClipControlServer(api: controlAPI)
