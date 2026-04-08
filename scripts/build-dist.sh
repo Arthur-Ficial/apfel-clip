@@ -1,0 +1,54 @@
+#!/bin/zsh
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+APP_NAME="apfel-clip"
+VERSION="$(tr -d '\n' < "$ROOT_DIR/.version")"
+ARCH="$(uname -m)"
+DIST_DIR="$ROOT_DIR/dist"
+APP_BUNDLE="$ROOT_DIR/build/${APP_NAME}.app"
+APP_ZIP="$DIST_DIR/${APP_NAME}-macos-${ARCH}.zip"
+CLI_STAGE="$DIST_DIR/${APP_NAME}-cli"
+CLI_TARBALL="$DIST_DIR/${APP_NAME}-cli-macos-${ARCH}.tar.gz"
+SHA_FILE="$DIST_DIR/SHA256SUMS"
+
+"$ROOT_DIR/scripts/build-app.sh"
+
+rm -rf "$DIST_DIR"
+mkdir -p "$DIST_DIR/homebrew" "$CLI_STAGE"
+
+ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$APP_ZIP"
+
+cp "$APP_BUNDLE/Contents/MacOS/${APP_NAME}" "$CLI_STAGE/${APP_NAME}"
+chmod +x "$CLI_STAGE/${APP_NAME}"
+
+if [[ -x "$APP_BUNDLE/Contents/Helpers/apfel" ]]; then
+  cp "$APP_BUNDLE/Contents/Helpers/apfel" "$CLI_STAGE/apfel"
+  chmod +x "$CLI_STAGE/apfel"
+fi
+
+cat > "$CLI_STAGE/README.txt" <<EOF
+apfel-clip CLI bundle
+
+Contents:
+- apfel-clip
+- apfel (when embedded at build time)
+
+If apfel is present beside apfel-clip, the binary will use it automatically.
+EOF
+
+tar -C "$CLI_STAGE" -czf "$CLI_TARBALL" .
+
+(
+  cd "$DIST_DIR"
+  shasum -a 256 "$(basename "$APP_ZIP")" "$(basename "$CLI_TARBALL")" > "$SHA_FILE"
+)
+
+APP_SHA="$(shasum -a 256 "$APP_ZIP" | awk '{print $1}')"
+"$ROOT_DIR/scripts/render-homebrew-cask.sh" "$VERSION" "$APP_SHA" > "$DIST_DIR/homebrew/apfel-clip.rb"
+
+print "==> Created:"
+print "    $APP_ZIP"
+print "    $CLI_TARBALL"
+print "    $SHA_FILE"
+print "    $DIST_DIR/homebrew/apfel-clip.rb"

@@ -1,88 +1,109 @@
 # apfel-clip
 
-AI-powered clipboard actions from the menu bar - powered by [apfel](https://github.com/Arthur-Ficial/apfel).
+AI-powered clipboard actions from the macOS menu bar, powered by [apfel](https://github.com/Arthur-Ficial/apfel).
 
-Copy any text. Click the menu bar icon. Pick an action. Result goes to your clipboard. Paste.
+Copy text, code, JSON, logs, or shell commands. Hit the menu bar icon or `Cmd+Shift+V`. Choose an action. Paste the result.
 
-All on-device. Free. Private. No API keys.
+Everything stays on-device. No API keys. No cloud model.
 
 ## What it does
 
-A macOS menu bar app that watches your clipboard and offers AI-powered text transformations:
+apfel-clip watches the clipboard and offers tailored actions for what you copied:
 
-**For text:** Fix grammar, make concise, make formal, make casual, summarize, bullet points, translate (German, French, Spanish, Japanese)
+- Text: fix grammar, rewrite tone, summarize, bullet points, translate
+- Code: explain, find bugs, add comments, simplify
+- Errors: explain error, suggest fix
+- Shell commands: explain, make safer
+- JSON: explain structure, pretty format
+- Custom prompts: run your own instruction against the current clipboard
 
-**For code:** Explain, find bugs, add comments, simplify
+The app now also supports:
 
-**For errors:** Explain error, suggest fix
-
-**For shell commands:** Explain command, make safer
-
-**For JSON:** Explain structure, pretty format
-
-Plus **custom prompts** - type your own instruction for any text.
+- Persistent history and settings
+- Favorites and hidden actions via the action manager
+- Larger panels for longer clipboard content
+- A localhost control API for automation
+- Self-contained packaging that can embed `apfel` inside the `.app`
 
 ## Requirements
 
-- **macOS 26+** (Tahoe) with Apple Intelligence enabled
-- **Apple Silicon** (M1 or later)
-- **[apfel](https://github.com/Arthur-Ficial/apfel) must be installed** - apfel-clip needs it to run the server
+- macOS 26+ (Tahoe)
+- Apple Silicon (M1 or later)
+- Apple Intelligence enabled
+
+For packaged GitHub/Homebrew app builds, `apfel` can be embedded inside the app bundle.
+
+For raw source builds or direct binaries, apfel-clip falls back to a system `apfel` on `PATH`.
 
 ## Install
 
-### Step 1: Install apfel (the AI server)
+### GitHub release
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | bash
+```
+
+That installs `apfel-clip.app` into `/Applications` and links `apfel-clip` into `~/.local/bin`.
+
+### Homebrew
 
 ```bash
 brew tap Arthur-Ficial/tap
-brew install apfel
+brew install --cask apfel-clip
 ```
 
-### Step 2: Install apfel-clip
+The generated Homebrew cask is built around the signed GitHub release zip in `dist/homebrew/apfel-clip.rb`.
 
-**From Homebrew:**
-
-```bash
-brew install Arthur-Ficial/tap/apfel-clip
-```
-
-**Or build from source:**
+### Build from source
 
 ```bash
 git clone https://github.com/Arthur-Ficial/apfel-clip.git
 cd apfel-clip
-make install
+make app
+make install-app
+make install-cli
 ```
 
-### Step 3: Run
+## Run
 
-```bash
-apfel-clip
-```
+- Open `apfel-clip.app`, or
+- Run `apfel-clip` from Terminal, or
+- Use the menu bar icon once installed
 
-A clipboard icon appears in your menu bar. That's it.
+Global hotkey: `Cmd+Shift+V`
 
 ## How it works
 
-1. apfel-clip starts `apfel --serve` on port 11435 in the background
-2. It monitors your clipboard for text changes (polls every 500ms)
-3. When you click the icon, it detects the content type (code, error, text, etc.)
-4. You pick an action - it sends the text to the local AI server
-5. The result auto-copies to your clipboard with a clear "Copied!" banner
-6. Paste the result wherever you need it
+1. apfel-clip looks for an embedded `apfel` helper first, then falls back to `apfel` on `PATH`
+2. It probes for an existing healthy local server and otherwise starts one on a free port
+3. It launches `apfel --serve --cors --permissive`
+4. It classifies your clipboard content and shows the matching action set
+5. It stores successful results in local history and can auto-copy them back to the clipboard
 
-**Global hotkey:** Cmd+Shift+V toggles the popover from anywhere.
+## Packaging and Distribution
 
-## Features
+The repo now includes:
 
-- **Smart content detection** - shows relevant actions based on what you copied
-- **Token budget display** - warns if text is too long for the 4096-token context
-- **Auto-copy** - results go straight to your clipboard
-- **Before/After view** - compare original and transformed text
-- **History** - last 10 transformations, one click to re-copy
-- **Custom prompts** - type your own instruction
-- **No dock icon** - lives only in the menu bar
+- `scripts/build-app.sh`: builds `build/apfel-clip.app`
+- `scripts/build-dist.sh`: builds GitHub release artifacts and checksums
+- `scripts/install.sh`: simple GitHub installer
+- `.github/workflows/ci.yml`: build/test/package validation
+- `.github/workflows/release.yml`: release artifact automation
+- `Packaging/Homebrew/apfel-clip.rb.template`: Homebrew cask template
+- `Resources/PrivacyInfo.xcprivacy`: privacy manifest
+- `Config/AppStore.entitlements`: App Sandbox entitlements for Mac App Store prep
+
+## App Store Readiness
+
+The repo is prepared for App Store work, but the final submission still depends on Apple-side signing and review artifacts:
+
+- Sign the app with your Mac App Store identity
+- Keep `apfel` embedded inside the app bundle for the review build
+- Submit the sandboxed, self-contained bundle through App Store Connect
+
+The included files in `Config/` and `Resources/` are the repo-side preparation for that flow.
 
 ## Related
 
-- [apfel](https://github.com/Arthur-Ficial/apfel) - CLI + OpenAI-compatible server for Apple's on-device LLM
+- [apfel](https://github.com/Arthur-Ficial/apfel) - CLI and OpenAI-compatible server for Apple's on-device LLM
 - [apfel-gui](https://github.com/Arthur-Ficial/apfel-gui) - Native macOS debug GUI for apfel

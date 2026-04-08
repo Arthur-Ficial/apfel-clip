@@ -4,8 +4,28 @@
 <dict>
     <key>CFBundleName</key>
     <string>apfel-clip</string>
+    <key>CFBundleDisplayName</key>
+    <string>apfel-clip</string>
     <key>CFBundleIdentifier</key>
     <string>com.arthurficial.apfel-clip</string>
+    <key>CFBundleVersion</key>
+    <string>0.2.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.2.0</string>
+    <key>CFBundleExecutable</key>
+    <string>apfel-clip</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>26.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSUIElement</key>
     <true/>
 </dict>

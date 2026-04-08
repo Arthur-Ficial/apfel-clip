@@ -1,0 +1,20 @@
+cask "apfel-clip" do
+  version "__VERSION__"
+  sha256 "__SHA256__"
+
+  url "https://github.com/Arthur-Ficial/apfel-clip/releases/download/v#{version}/apfel-clip-macos-arm64.zip"
+  name "apfel-clip"
+  desc "AI-powered clipboard actions from the macOS menu bar"
+  homepage "https://github.com/Arthur-Ficial/apfel-clip"
+
+  auto_updates false
+  depends_on arch: :arm64
+
+  app "apfel-clip.app"
+  binary "apfel-clip.app/Contents/MacOS/apfel-clip"
+
+  zap trash: [
+    "~/Library/Application Support/apfel-clip",
+    "~/Library/Preferences/com.arthurficial.apfel-clip.plist",
+  ]
+end

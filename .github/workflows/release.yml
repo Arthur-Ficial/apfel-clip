@@ -1,0 +1,37 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: macos-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install apfel helper
+        run: |
+          brew tap Arthur-Ficial/tap
+          brew install apfel
+
+      - name: Test
+        run: swift test
+
+      - name: Build release artifacts
+        run: ./scripts/build-dist.sh
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/apfel-clip-macos-arm64.zip
+            dist/apfel-clip-cli-macos-arm64.tar.gz
+            dist/SHA256SUMS
+            dist/homebrew/apfel-clip.rb

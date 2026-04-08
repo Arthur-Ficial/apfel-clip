@@ -5,6 +5,9 @@ import PackageDescription
 let package = Package(
     name: "apfel-clip",
     platforms: [.macOS(.v26)],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-testing.git", from: "0.12.0"),
+    ],
     targets: [
         .executableTarget(
             name: "apfel-clip",
@@ -17,6 +20,14 @@ let package = Package(
                     "-Xlinker", "./Info.plist",
                 ])
             ]
+        ),
+        .testTarget(
+            name: "ApfelClipTests",
+            dependencies: [
+                "apfel-clip",
+                .product(name: "Testing", package: "swift-testing"),
+            ],
+            path: "Tests"
         ),
     ]
 )
