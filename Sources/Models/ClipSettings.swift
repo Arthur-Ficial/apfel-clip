@@ -29,7 +29,7 @@ enum ClipPrimaryPanel: String, Codable, CaseIterable, Sendable {
 }
 
 struct ClipSettings: Codable, Equatable, Sendable {
-    var autoCopy: Bool = true
+    var autoCopy: Bool = false
     var recentCustomPrompts: [String] = []
     var preferredPanel: ClipPrimaryPanel = .actions
     var favoriteActionIDs: [String] = []
