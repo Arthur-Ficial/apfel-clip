@@ -3,27 +3,18 @@ import Foundation
 enum ClipPrimaryPanel: String, Codable, CaseIterable, Sendable {
     case actions
     case history
-    case settings
 
     var title: String {
         switch self {
-        case .actions:
-            return "Actions"
-        case .history:
-            return "History"
-        case .settings:
-            return "Settings"
+        case .actions: return "Action"
+        case .history: return "History"
         }
     }
 
     var screen: ClipScreen {
         switch self {
-        case .actions:
-            return .actions
-        case .history:
-            return .history
-        case .settings:
-            return .settings
+        case .actions: return .actions
+        case .history: return .history
         }
     }
 }

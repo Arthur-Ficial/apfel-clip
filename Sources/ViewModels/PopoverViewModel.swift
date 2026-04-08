@@ -154,6 +154,11 @@ final class PopoverViewModel {
         screen = settings.preferredPanel.screen
     }
 
+    func navigateTo(_ target: ClipScreen) {
+        screen = target
+        if target == .actions { banner = nil }
+    }
+
     func runAction(id: String) async throws -> ClipResultState {
         guard let action = ClipActionCatalog.action(id: id) else {
             throw ClipAppError.actionNotFound(id)

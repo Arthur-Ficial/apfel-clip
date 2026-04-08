@@ -59,11 +59,7 @@ struct PopoverRootView: View {
 
                 Spacer(minLength: 0)
 
-                if viewModel.screen.isPrimaryPanel {
-                    Label("⌘⇧V", systemImage: "keyboard")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                } else {
+                if viewModel.screen == .customPrompt {
                     Button {
                         viewModel.returnToPrimaryPanel()
                     } label: {
@@ -72,27 +68,37 @@ struct PopoverRootView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                } else {
+                    HStack(spacing: 10) {
+                        Label("⌘⇧V", systemImage: "keyboard")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        Button {
+                            viewModel.navigateTo(.settings)
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(viewModel.screen == .settings
+                                    ? Color(red: 0.16, green: 0.49, blue: 0.22)
+                                    : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
 
             HStack(spacing: 8) {
-                primaryTab(.actions)
-                primaryTab(.history)
-                primaryTab(.settings)
+                screenTab(title: "Action", screen: .actions, selectPanel: .actions)
+                screenTab(title: "Result", screen: .result, selectPanel: nil)
+                screenTab(title: "History", screen: .history, selectPanel: .history)
             }
 
-            if !viewModel.screen.isPrimaryPanel {
+            if viewModel.screen == .customPrompt {
                 HStack {
-                    Text(viewModel.screenTitle)
+                    Text("Custom Prompt")
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    if viewModel.screen == .result, let result = viewModel.result {
-                        statusPill(
-                            title: result.copiedToClipboard ? "Copied" : "Ready",
-                            color: result.copiedToClipboard ? Color.green : Color.blue
-                        )
-                    }
                 }
             }
         }
@@ -555,14 +561,19 @@ struct PopoverRootView: View {
                             Text("Result")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                             Spacer()
+                            if result.copiedToClipboard {
+                                Label("Already in clipboard", systemImage: "checkmark.circle.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                            }
                             Button {
                                 viewModel.copyCurrentResult()
                             } label: {
-                                Label(result.copiedToClipboard ? "Copied!" : "Copy", systemImage: "doc.on.doc")
+                                Label(result.copiedToClipboard ? "Copy again" : "Copy", systemImage: "doc.on.doc")
                                     .font(.caption.weight(.semibold))
                             }
                             .buttonStyle(.plain)
-                            .foregroundStyle(result.copiedToClipboard ? Color(red: 0.16, green: 0.49, blue: 0.22) : .secondary)
+                            .foregroundStyle(.secondary)
                         }
 
                         ScrollView {
@@ -646,23 +657,29 @@ struct PopoverRootView: View {
         }
     }
 
-    private func primaryTab(_ panel: ClipPrimaryPanel) -> some View {
-        Button {
-            Task {
-                await viewModel.selectPrimaryPanel(panel)
+    private func screenTab(title: String, screen: ClipScreen, selectPanel: ClipPrimaryPanel?) -> some View {
+        let isActive = viewModel.screen == screen
+        let isResultUnavailable = screen == .result && viewModel.result == nil
+        let green = Color(red: 0.16, green: 0.49, blue: 0.22)
+        return Button {
+            if let panel = selectPanel {
+                Task { await viewModel.selectPrimaryPanel(panel) }
+            } else {
+                viewModel.navigateTo(screen)
             }
         } label: {
-            Text(panel.title)
+            Text(title)
                 .font(.caption.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 9)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(viewModel.screen == panel.screen ? Color(red: 0.16, green: 0.49, blue: 0.22) : Color.white.opacity(0.75))
+                        .fill(isActive ? green : Color.white.opacity(0.75))
                 )
-                .foregroundStyle(viewModel.screen == panel.screen ? .white : .primary)
+                .foregroundStyle(isActive ? .white : isResultUnavailable ? Color.secondary.opacity(0.5) : Color.primary)
         }
         .buttonStyle(.plain)
+        .disabled(isResultUnavailable)
     }
 
     private func bannerView(_ banner: ClipBanner) -> some View {

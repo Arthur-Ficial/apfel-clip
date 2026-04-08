@@ -33,10 +33,11 @@ struct ClipAction: Identifiable, Codable, Hashable, Sendable {
 }
 
 enum ClipActionCatalog {
-    private static let rewriterSystem = "You are a text rewriter. Apply the instruction and reply with only the rewritten text. Never add quotes or commentary."
-    private static let translatorSystem = "You are a translator. Reply with only the translation."
-    private static let explainerSystem = "You are a concise expert explainer."
-    private static let codeSystem = "You are a careful code reviewer. Be specific and concise."
+    private static let strict = "Output ONLY the result. No introduction, no explanation, no commentary, no before/after labels, no quotes around the output, no sign-off. Just the transformed text."
+    private static let rewriterSystem = "You are a text rewriter. \(strict)"
+    private static let translatorSystem = "You are a translator. \(strict)"
+    private static let explainerSystem = "You are a concise expert explainer. \(strict)"
+    private static let codeSystem = "You are a careful code reviewer. \(strict)"
 
     static let all: [ClipAction] = [
         ClipAction(
@@ -75,7 +76,7 @@ enum ClipActionCatalog {
             "summarize",
             name: "Summarize",
             icon: "text.badge.minus",
-            systemPrompt: "Summarize in 1-3 precise sentences. Reply with only the summary.",
+            systemPrompt: "Summarize in 1-3 precise sentences. \(strict)",
             instruction: "Summarize:",
             contentTypes: [.text, .code]
         ),
@@ -139,7 +140,7 @@ enum ClipActionCatalog {
             "add-comments",
             name: "Add comments",
             icon: "text.bubble",
-            systemPrompt: "Reply with only the code with comments added. Keep behavior unchanged.",
+            systemPrompt: "Add clear inline comments to the code. Keep behavior unchanged. \(strict)",
             instruction: "Add clear inline comments to this code:",
             contentTypes: [.code]
         ),
@@ -163,7 +164,7 @@ enum ClipActionCatalog {
             "suggest-fix",
             name: "Suggest fix",
             icon: "wrench",
-            systemPrompt: "Reply with only the fix command or code change.",
+            systemPrompt: "Give the exact fix command or code change. \(strict)",
             instruction: "Give the exact fix for this error:",
             contentTypes: [.error]
         ),
@@ -179,7 +180,7 @@ enum ClipActionCatalog {
             "make-safer",
             name: "Make safer",
             icon: "shield",
-            systemPrompt: "Reply with only a safer version of the command, with brief inline # comments when useful.",
+            systemPrompt: "Rewrite as a safer version of the command, with brief inline # comments when useful. \(strict)",
             instruction: "Add safeguards to this shell command:",
             contentTypes: [.shellCommand]
         ),

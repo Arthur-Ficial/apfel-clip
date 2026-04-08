@@ -55,9 +55,9 @@ enum ClipScreen: String, Equatable, Sendable {
 
     var isPrimaryPanel: Bool {
         switch self {
-        case .actions, .history, .settings:
+        case .actions, .history, .settings, .result:
             return true
-        case .customPrompt, .result:
+        case .customPrompt:
             return false
         }
     }
