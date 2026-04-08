@@ -3,6 +3,7 @@ import SwiftUI
 struct PopoverRootView: View {
     @Bindable var viewModel: PopoverViewModel
     @State private var hoveredActionID: String?
+    @State private var draggingActionID: String?
 
     var body: some View {
         ZStack {
@@ -236,6 +237,22 @@ struct PopoverRootView: View {
         .disabled(viewModel.isRunning)
         .onHover { hovered in
             hoveredActionID = hovered ? action.id : nil
+        }
+        .opacity(draggingActionID == action.id ? 0.4 : 1.0)
+        .draggable(action.id) {
+            // drag preview
+            Label(action.name, systemImage: action.icon)
+                .padding(8)
+                .background(Color.white.opacity(0.95))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .dropDestination(for: String.self) { droppedIDs, _ in
+            guard let droppedID = droppedIDs.first, droppedID != action.id else { return false }
+            Task { await viewModel.reorderAction(droppedID, before: action.id) }
+            draggingActionID = nil
+            return true
+        } isTargeted: { targeted in
+            if targeted { draggingActionID = draggingActionID ?? "" }
         }
     }
 
@@ -630,13 +647,15 @@ struct PopoverRootView: View {
                     }
 
                     if viewModel.isSaveFormVisible {
+                        let capturedPrompt = viewModel.customPrompt
                         SavedActionFormView(
-                            mode: .create(prompt: viewModel.customPrompt),
+                            mode: .create(prompt: capturedPrompt),
+                            generateName: { await viewModel.generateActionName(for: capturedPrompt) },
                             onSave: { name, icon, types in
                                 Task {
                                     await viewModel.saveCustomAction(
                                         name: name, icon: icon,
-                                        prompt: viewModel.customPrompt, contentTypes: types
+                                        prompt: capturedPrompt, contentTypes: types
                                     )
                                     withAnimation { viewModel.isSaveFormVisible = false }
                                     viewModel.showBanner(.init(style: .success, title: "Action saved", detail: name))
@@ -786,6 +805,7 @@ struct PopoverRootView: View {
                         if viewModel.isSaveResultFormVisible, let prompt = result.sourcePrompt {
                             SavedActionFormView(
                                 mode: .create(prompt: prompt),
+                                generateName: { await viewModel.generateActionName(for: prompt) },
                                 onSave: { name, icon, types in
                                     Task {
                                         await viewModel.saveCustomAction(name: name, icon: icon, prompt: prompt, contentTypes: types)

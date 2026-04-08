@@ -50,4 +50,5 @@ struct ClipSettings: Codable, Equatable, Sendable {
     var favoriteActionIDs: [String] = []
     var hiddenActionIDs: [String] = []
     var savedCustomActions: [SavedCustomAction] = []
+    var actionOrder: [String] = []   // user-defined ordering; empty = default
 }

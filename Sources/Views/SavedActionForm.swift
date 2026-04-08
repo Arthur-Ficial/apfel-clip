@@ -77,16 +77,24 @@ struct SavedActionFormView: View {
     let mode: Mode
     let onSave: (String, String, Set<ContentType>) -> Void
     let onCancel: () -> Void
+    let generateName: (() async -> String?)?
 
     @State private var name: String
     @State private var selectedIcon: String
     @State private var selectedTypes: Set<ContentType>
     @State private var isIconGridVisible = false
+    @State private var isGeneratingName = false
 
     private let green = Color(red: 0.16, green: 0.49, blue: 0.22)
 
-    init(mode: Mode, onSave: @escaping (String, String, Set<ContentType>) -> Void, onCancel: @escaping () -> Void) {
+    init(
+        mode: Mode,
+        generateName: (() async -> String?)? = nil,
+        onSave: @escaping (String, String, Set<ContentType>) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
         self.mode = mode
+        self.generateName = generateName
         self.onSave = onSave
         self.onCancel = onCancel
         switch mode {
@@ -166,22 +174,42 @@ struct SavedActionFormView: View {
 
                 // Name field
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Action name")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    TextField("e.g. Translate to Italian", text: $name)
+                    HStack(spacing: 6) {
+                        Text("Action name")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        if isGeneratingName {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .tint(green)
+                            Text("Naming…")
+                                .font(.caption2)
+                                .foregroundStyle(green)
+                        }
+                    }
+                    TextField(isGeneratingName ? "" : "e.g. Translate to Italian", text: $name)
                         .textFieldStyle(.plain)
                         .padding(8)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white.opacity(0.9))
+                                .fill(Color.white.opacity(isGeneratingName ? 0.6 : 0.9))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .stroke(!name.isEmpty ? green.opacity(0.4) : Color.clear, lineWidth: 1)
                         )
                         .frame(height: 36)
+                        .disabled(isGeneratingName)
                 }
+            }
+            .task {
+                guard case .create = mode, let generateName else { return }
+                isGeneratingName = true
+                if let suggested = await generateName() {
+                    let trimmed = suggested.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty { name = trimmed }
+                }
+                isGeneratingName = false
             }
 
             // Icon grid — expands inline on demand

@@ -47,7 +47,8 @@ final class PopoverViewModel {
         let saved = settings.savedCustomActions
             .filter { $0.contentTypes.contains(contentType) && !hidden.contains($0.id) }
             .map { $0.asClipAction() }
-        let combined = builtIn + saved
+        let combined = saved + builtIn  // saved custom actions first by default
+        let order = settings.actionOrder
 
         return combined.sorted { lhs, rhs in
             let lhsFavorite = favorites.contains(lhs.id)
@@ -56,9 +57,16 @@ final class PopoverViewModel {
             if lhsFavorite, rhsFavorite {
                 return favoriteRank(of: lhs.id, in: orderedFavorites) < favoriteRank(of: rhs.id, in: orderedFavorites)
             }
+            // Respect user drag-order (non-favorites only)
+            let lhsPos = order.firstIndex(of: lhs.id)
+            let rhsPos = order.firstIndex(of: rhs.id)
+            if let l = lhsPos, let r = rhsPos { return l < r }
+            if lhsPos != nil { return true }
+            if rhsPos != nil { return false }
+            // Default: saved before built-in, then catalog rank
             let lhsIsBuiltIn = ClipActionCatalog.action(id: lhs.id) != nil
             let rhsIsBuiltIn = ClipActionCatalog.action(id: rhs.id) != nil
-            if lhsIsBuiltIn != rhsIsBuiltIn { return lhsIsBuiltIn }
+            if lhsIsBuiltIn != rhsIsBuiltIn { return !lhsIsBuiltIn }
             return catalogRank(of: lhs.id) < catalogRank(of: rhs.id)
         }
     }
@@ -356,6 +364,23 @@ final class PopoverViewModel {
         guard settings.savedCustomActions.indices.contains(target) else { return }
         settings.savedCustomActions.swapAt(i, target)
         await persistSettings()
+    }
+
+    func reorderAction(_ id: String, before targetID: String) async {
+        var order = availableActions.map(\.id)
+        guard let from = order.firstIndex(of: id),
+              let to = order.firstIndex(of: targetID),
+              from != to else { return }
+        order.remove(at: from)
+        let insertAt = order.firstIndex(of: targetID) ?? to
+        order.insert(id, at: insertAt)
+        settings.actionOrder = order
+        await persistSettings()
+    }
+
+    func generateActionName(for prompt: String) async -> String? {
+        let instruction = "Suggest a short action name (2–4 words) for a clipboard transformation that does: \(prompt.prefix(300)). Output ONLY the name — no explanation, no quotes, no trailing punctuation."
+        return try? await actionExecutor.runCustom(prompt: instruction, input: "")
     }
 
     func updateAutoCopy(_ enabled: Bool) async {
