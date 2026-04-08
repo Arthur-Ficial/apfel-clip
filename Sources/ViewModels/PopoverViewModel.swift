@@ -26,6 +26,7 @@ final class PopoverViewModel {
     var editingSavedActionID: String? = nil
     var serverState: ClipServerState = .starting
     var controlPort: Int?
+    private var bannerDismissTask: Task<Void, Never>?
 
     init(
         actionExecutor: any ClipActionExecuting,
@@ -268,7 +269,7 @@ final class PopoverViewModel {
         clipboardText = result.output
         contentType = ContentDetector.detect(result.output)
         self.result?.copiedToClipboard = true
-        banner = ClipBanner(style: .success, title: "Copied to clipboard", detail: result.actionName)
+        showBanner(ClipBanner(style: .success, title: "Copied to clipboard", detail: result.actionName))
     }
 
     func openHistoryEntry(_ entry: ClipHistoryEntry) {
@@ -287,7 +288,7 @@ final class PopoverViewModel {
     func clearHistory() async {
         history = []
         try? await historyStore.save([])
-        banner = ClipBanner(style: .info, title: "History cleared", detail: nil)
+        showBanner(ClipBanner(style: .info, title: "History cleared", detail: nil, autoDismiss: true))
         if screen == .history {
             screen = .history
         }
@@ -401,7 +402,14 @@ final class PopoverViewModel {
     }
 
     func showBanner(_ banner: ClipBanner?) {
+        bannerDismissTask?.cancel()
         self.banner = banner
+        guard let banner, banner.style == .success || banner.autoDismiss else { return }
+        bannerDismissTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            self?.banner = nil
+        }
     }
 
     func isFavorite(_ actionID: String) -> Bool {
@@ -442,7 +450,7 @@ final class PopoverViewModel {
         } else if screen == .actions || screen == .customPrompt {
             result = nil
             if !clipboardText.isEmpty && screen == .customPrompt {
-                banner = ClipBanner(style: .info, title: "Clipboard updated", detail: "Custom prompt will apply to the latest clipboard text.")
+                showBanner(ClipBanner(style: .info, title: "Clipboard updated", detail: "Custom prompt will apply to the latest clipboard text.", autoDismiss: true))
             }
         }
     }
@@ -483,9 +491,9 @@ final class PopoverViewModel {
             clipboardService.setText(trimmedOutput)
             clipboardText = trimmedOutput
             contentType = ContentDetector.detect(trimmedOutput)
-            banner = ClipBanner(style: .success, title: "Copied to clipboard", detail: actionName)
+            showBanner(ClipBanner(style: .success, title: "Copied to clipboard", detail: actionName))
         } else {
-            banner = ClipBanner(style: .success, title: "Result ready", detail: actionName)
+            showBanner(ClipBanner(style: .success, title: "Result ready", detail: actionName))
         }
 
         return newResult

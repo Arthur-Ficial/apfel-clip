@@ -3,7 +3,9 @@ import SwiftUI
 struct PopoverRootView: View {
     @Bindable var viewModel: PopoverViewModel
     @State private var hoveredActionID: String?
-    @State private var draggingActionID: String?
+    @State private var hoveredHistoryID: String?
+    @State private var hoveredRecentPromptID: String?
+    @State private var dropTargetID: String?
 
     var body: some View {
         ZStack {
@@ -23,13 +25,19 @@ struct PopoverRootView: View {
                     bannerView(banner)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 12)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .opacity
+                        ))
                 } else {
                     Spacer().frame(height: 12)
                 }
                 content
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
+                    .animation(.easeInOut(duration: 0.18), value: viewModel.screen)
             }
+            .animation(.easeInOut(duration: 0.25), value: viewModel.banner != nil)
         }
         .frame(width: 540, height: 820)
     }
@@ -185,6 +193,7 @@ struct PopoverRootView: View {
         let isThisRunning = viewModel.runningActionID == action.id
         let isOtherRunning = viewModel.isRunning && !isThisRunning
         let isHovered = hoveredActionID == action.id && !viewModel.isRunning
+        let isDropTarget = dropTargetID == action.id
         let green = Color(red: 0.16, green: 0.49, blue: 0.22)
         let bgColor: Color = isThisRunning ? green.opacity(0.07) : isHovered ? .white : Color.white.opacity(0.8)
         let isSaved = viewModel.settings.savedCustomActions.contains { $0.id == action.id }
@@ -192,67 +201,90 @@ struct PopoverRootView: View {
             : isSaved ? "Custom"
             : action.localAction == nil ? "AI action" : "Local action"
 
-        return Button {
-            Task { _ = try? await viewModel.runAction(action) }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    if isThisRunning {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(green)
-                    } else {
-                        Image(systemName: action.icon)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(green)
+        return ZStack(alignment: .top) {
+            Button {
+                Task { _ = try? await viewModel.runAction(action) }
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        if isThisRunning {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(green)
+                        } else {
+                            Image(systemName: action.icon)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(green)
+                        }
                     }
+                    .frame(width: 20)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(action.name)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Text(subtitleText)
+                            .font(.caption)
+                            .foregroundStyle(isThisRunning ? green : .secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(isHovered ? green.opacity(0.5) : Color.secondary.opacity(0.5))
+                        .opacity(isThisRunning ? 0 : 1)
                 }
-                .frame(width: 20)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(action.name)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
-                    Text(subtitleText)
-                        .font(.caption)
-                        .foregroundStyle(isThisRunning ? green : .secondary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(isHovered ? green.opacity(0.5) : Color.secondary.opacity(0.5))
-                    .opacity(isThisRunning ? 0 : 1)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(bgColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(
+                            isDropTarget ? green.opacity(0.6) : isThisRunning ? green.opacity(0.25) : Color.clear,
+                            lineWidth: isDropTarget ? 2 : 1
+                        )
+                )
+                .opacity(isOtherRunning ? 0.4 : 1.0)
+                .animation(.easeInOut(duration: 0.15), value: isOtherRunning)
+                .animation(.easeInOut(duration: 0.12), value: isHovered)
+                .animation(.easeInOut(duration: 0.12), value: isDropTarget)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(bgColor))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isThisRunning ? green.opacity(0.25) : Color.clear, lineWidth: 1)
-            )
-            .opacity(isOtherRunning ? 0.4 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: isOtherRunning)
-            .animation(.easeInOut(duration: 0.12), value: isHovered)
+            .buttonStyle(.plain)
+            .disabled(viewModel.isRunning)
+            .onHover { hovered in
+                hoveredActionID = hovered ? action.id : nil
+            }
+
+            // Insertion indicator — floats above this row when it is the drop target
+            if isDropTarget {
+                HStack(spacing: 0) {
+                    Circle()
+                        .fill(green)
+                        .frame(width: 8, height: 8)
+                    Rectangle()
+                        .fill(green)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 2)
+                }
+                .offset(y: -5)
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(viewModel.isRunning)
-        .onHover { hovered in
-            hoveredActionID = hovered ? action.id : nil
-        }
-        .opacity(draggingActionID == action.id ? 0.4 : 1.0)
         .draggable(action.id) {
-            // drag preview
             Label(action.name, systemImage: action.icon)
-                .padding(8)
-                .background(Color.white.opacity(0.95))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .font(.system(size: 13, weight: .medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.white.opacity(0.95))
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
         }
         .dropDestination(for: String.self) { droppedIDs, _ in
             guard let droppedID = droppedIDs.first, droppedID != action.id else { return false }
             Task { await viewModel.reorderAction(droppedID, before: action.id) }
-            draggingActionID = nil
+            dropTargetID = nil
             return true
         } isTargeted: { targeted in
-            if targeted { draggingActionID = draggingActionID ?? "" }
+            dropTargetID = targeted ? action.id : (dropTargetID == action.id ? nil : dropTargetID)
         }
     }
 
@@ -288,6 +320,7 @@ struct PopoverRootView: View {
                     ScrollView {
                         VStack(spacing: 8) {
                             ForEach(viewModel.history) { entry in
+                                let isHoveredEntry = hoveredHistoryID == entry.id
                                 Button {
                                     viewModel.openHistoryEntry(entry)
                                 } label: {
@@ -310,10 +343,14 @@ struct PopoverRootView: View {
                                     .padding(.vertical, 10)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(Color.white.opacity(0.8))
+                                            .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
+                                            .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                .onHover { hovered in
+                                    hoveredHistoryID = hovered ? entry.id : nil
+                                }
                             }
                         }
                     }
@@ -364,8 +401,10 @@ struct PopoverRootView: View {
                                     .background(
                                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                                             .fill(viewModel.settings.preferredPanel == panel ? Color(red: 0.16, green: 0.49, blue: 0.22) : Color.white.opacity(0.75))
+                                            .animation(.easeInOut(duration: 0.12), value: viewModel.settings.preferredPanel)
                                     )
                                     .foregroundStyle(viewModel.settings.preferredPanel == panel ? .white : .primary)
+                                    .animation(.easeInOut(duration: 0.12), value: viewModel.settings.preferredPanel)
                             }
                             .buttonStyle(.plain)
                         }
@@ -679,6 +718,7 @@ struct PopoverRootView: View {
                             ScrollView {
                                 VStack(alignment: .leading, spacing: 8) {
                                     ForEach(viewModel.settings.recentCustomPrompts, id: \.self) { prompt in
+                                        let isHoveredPrompt = hoveredRecentPromptID == prompt
                                         Button {
                                             viewModel.useRecentPrompt(prompt)
                                         } label: {
@@ -688,10 +728,14 @@ struct PopoverRootView: View {
                                                 .padding(10)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                        .fill(Color.white.opacity(0.78))
+                                                        .fill(isHoveredPrompt ? Color.white : Color.white.opacity(0.78))
+                                                        .animation(.easeInOut(duration: 0.1), value: isHoveredPrompt)
                                                 )
                                         }
                                         .buttonStyle(.plain)
+                                        .onHover { hovered in
+                                            hoveredRecentPromptID = hovered ? prompt : nil
+                                        }
                                     }
                                 }
                             }
@@ -777,6 +821,7 @@ struct PopoverRootView: View {
                                 Label("In clipboard", systemImage: "checkmark.circle.fill")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(green)
+                                    .transition(.scale(scale: 0.85).combined(with: .opacity))
                             }
                             Button {
                                 viewModel.copyCurrentResult()
@@ -785,13 +830,15 @@ struct PopoverRootView: View {
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
+                            .animation(.easeInOut(duration: 0.15), value: isInClipboard)
                         }
+                        .animation(.easeInOut(duration: 0.2), value: isInClipboard)
 
                         TextEditor(text: Binding(
                             get: { result.output },
                             set: { viewModel.result?.output = $0 }
                         ))
-                        .font(.body)
+                        .font(.system(size: 16))
                         .scrollContentBackground(.hidden)
                         .padding(8)
                         .background(
@@ -915,8 +962,10 @@ struct PopoverRootView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isActive ? green : Color.white.opacity(0.75))
+                        .animation(.easeInOut(duration: 0.12), value: isActive)
                 )
                 .foregroundStyle(isActive ? .white : isResultUnavailable ? Color.secondary.opacity(0.5) : Color.primary)
+                .animation(.easeInOut(duration: 0.12), value: isActive)
         }
         .buttonStyle(.plain)
         .disabled(isResultUnavailable)

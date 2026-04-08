@@ -45,6 +45,7 @@ struct ClipBanner: Equatable, Sendable {
     let style: Style
     let title: String
     let detail: String?
+    var autoDismiss: Bool = false
 }
 
 enum ClipScreen: String, Equatable, Sendable {
