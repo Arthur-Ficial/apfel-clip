@@ -7,9 +7,10 @@ VERSION="$(tr -d '\n' < "$ROOT_DIR/.version")"
 ARCH="$(uname -m)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$ROOT_DIR/build/${APP_NAME}.app"
-APP_ZIP="$DIST_DIR/${APP_NAME}-macos-${ARCH}.zip"
+APP_ZIP="$DIST_DIR/${APP_NAME}-v${VERSION}-macos-${ARCH}.zip"
+APP_ZIP_STABLE="$DIST_DIR/${APP_NAME}-macos-${ARCH}.zip"
 CLI_STAGE="$DIST_DIR/${APP_NAME}-cli"
-CLI_TARBALL="$DIST_DIR/${APP_NAME}-cli-macos-${ARCH}.tar.gz"
+CLI_TARBALL="$DIST_DIR/${APP_NAME}-v${VERSION}-cli-macos-${ARCH}.tar.gz"
 SHA_FILE="$DIST_DIR/SHA256SUMS"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 KEYCHAIN_PROFILE="${KEYCHAIN_PROFILE:-}"
@@ -23,7 +24,10 @@ fi
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR/homebrew" "$CLI_STAGE"
 
-COPYFILE_DISABLE=1 ditto -c -k --norsrc --keepParent "$APP_BUNDLE" "$APP_ZIP"
+# Use ditto WITHOUT --norsrc so the stapled notarization ticket is preserved
+COPYFILE_DISABLE=1 ditto -c -k --keepParent "$APP_BUNDLE" "$APP_ZIP"
+# Stable name for the always-works landing page download URL
+cp "$APP_ZIP" "$APP_ZIP_STABLE"
 
 cp "$APP_BUNDLE/Contents/MacOS/${APP_NAME}" "$CLI_STAGE/${APP_NAME}"
 chmod +x "$CLI_STAGE/${APP_NAME}"
@@ -47,7 +51,7 @@ tar -C "$CLI_STAGE" -czf "$CLI_TARBALL" .
 
 (
   cd "$DIST_DIR"
-  shasum -a 256 "$(basename "$APP_ZIP")" "$(basename "$CLI_TARBALL")" > "$SHA_FILE"
+  shasum -a 256 "$(basename "$APP_ZIP")" "$(basename "$APP_ZIP_STABLE")" "$(basename "$CLI_TARBALL")" > "$SHA_FILE"
 )
 
 APP_SHA="$(shasum -a 256 "$APP_ZIP" | awk '{print $1}')"

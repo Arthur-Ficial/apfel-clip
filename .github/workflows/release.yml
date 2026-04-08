@@ -67,7 +67,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            dist/apfel-clip-v*-macos-arm64.zip
             dist/apfel-clip-macos-arm64.zip
-            dist/apfel-clip-cli-macos-arm64.tar.gz
+            dist/apfel-clip-v*-cli-macos-arm64.tar.gz
             dist/SHA256SUMS
             dist/homebrew/apfel-clip.rb
