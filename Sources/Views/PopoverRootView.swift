@@ -29,7 +29,7 @@ struct PopoverRootView: View {
                     .padding(.bottom, 16)
             }
         }
-        .frame(width: 480, height: 720)
+        .frame(width: 540, height: 820)
     }
 
     private var header: some View {
@@ -481,25 +481,62 @@ struct PopoverRootView: View {
     }
 
     private var resultPanel: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             if let result = viewModel.result {
+                // ── Original (compact, on top) ──────────────────────────────
+                SurfaceCard {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Original")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(result.input)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.primary.opacity(0.75))
+                            .lineLimit(4)
+                            .truncationMode(.tail)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                // ── Action connector ────────────────────────────────────────
+                HStack(spacing: 8) {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(height: 1)
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                        Text(result.actionName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                    }
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(height: 1)
+                }
+                .padding(.vertical, 2)
+
+                // ── Result (large, primary, fills remaining space) ──────────
                 SurfaceCard(fillAvailableHeight: true) {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            statusPill(title: result.actionName, color: Color(red: 0.16, green: 0.49, blue: 0.22))
+                            Text("Result")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
                             Spacer()
                             Button {
                                 viewModel.copyCurrentResult()
                             } label: {
-                                Label(result.copiedToClipboard ? "Copy Again" : "Copy", systemImage: "doc.on.doc")
+                                Label(result.copiedToClipboard ? "Copied!" : "Copy", systemImage: "doc.on.doc")
                                     .font(.caption.weight(.semibold))
                             }
                             .buttonStyle(.plain)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(result.copiedToClipboard ? Color(red: 0.16, green: 0.49, blue: 0.22) : .secondary)
                         }
-
-                        Text("Result")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
 
                         ScrollView {
                             Text(result.output)
@@ -512,24 +549,6 @@ struct PopoverRootView: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(Color.white.opacity(0.9))
                         )
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Original clipboard")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                            ScrollView {
-                                Text(result.input)
-                                    .font(.caption.monospaced())
-                                    .textSelection(.enabled)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(maxHeight: 120)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color.white.opacity(0.75))
-                            )
-                        }
 
                         Spacer(minLength: 0)
 
