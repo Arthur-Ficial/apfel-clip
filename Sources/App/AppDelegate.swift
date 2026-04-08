@@ -47,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         serverManager.stop()
     }
 
-    func showPopover() {
+    @objc func showPopover() {
         guard let statusButton = statusItem?.button,
               let popover else { return }
         if !popover.isShown {
@@ -63,6 +63,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
     @objc private func togglePopover(_ sender: Any?) {
         guard let popover else { return }
         popover.isShown ? hidePopover() : showPopover()
+    }
+
+    @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else { return }
+        if event.type == .rightMouseUp {
+            let menu = buildContextMenu()
+            sender.menu = menu
+            sender.performClick(nil)
+            sender.menu = nil
+        } else {
+            togglePopover(sender)
+        }
+    }
+
+    func buildContextMenu() -> NSMenu {
+        let menu = NSMenu()
+
+        let openItem = NSMenuItem(title: "Open apfel-clip", action: #selector(showPopover), keyEquivalent: "")
+        menu.addItem(openItem)
+
+        menu.addItem(.separator())
+
+        let launchItem = NSMenuItem(
+            title: viewModel?.settings.launchAtLoginEnabled == true ? "Disable Launch at Login" : "Enable Launch at Login",
+            action: #selector(toggleLaunchAtLogin),
+            keyEquivalent: ""
+        )
+        menu.addItem(launchItem)
+
+        let autoCopyItem = NSMenuItem(
+            title: viewModel?.settings.autoCopy == true ? "Disable Auto-Copy" : "Enable Auto-Copy",
+            action: #selector(toggleAutoCopy),
+            keyEquivalent: ""
+        )
+        menu.addItem(autoCopyItem)
+
+        menu.addItem(.separator())
+
+        let quitItem = NSMenuItem(
+            title: "Quit apfel-clip",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        menu.addItem(quitItem)
+
+        return menu
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        guard let viewModel else { return }
+        Task {
+            await viewModel.updateLaunchAtLogin(!viewModel.settings.launchAtLoginEnabled)
+        }
+    }
+
+    @objc private func toggleAutoCopy() {
+        guard let viewModel else { return }
+        Task {
+            await viewModel.updateAutoCopy(!viewModel.settings.autoCopy)
+        }
     }
 
     private func bootstrap(viewModel: PopoverViewModel) async {
@@ -102,11 +162,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
     private func configurePopover(viewModel: PopoverViewModel) {
         let hostingController = NSHostingController(rootView: PopoverRootView(viewModel: viewModel))
         hostingController.view.frame = CGRect(x: 0, y: 0, width: 540, height: 820)
+        hostingController.view.appearance = NSAppearance(named: .aqua)
 
         let popover = NSPopover()
         popover.behavior = .transient
         popover.contentSize = NSSize(width: 540, height: 820)
         popover.contentViewController = hostingController
+        popover.appearance = NSAppearance(named: .aqua)
         self.popover = popover
         popover.delegate = self
     }
@@ -116,7 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "apfel-clip")
             button.imagePosition = .imageOnly
-            button.action = #selector(togglePopover(_:))
+            button.action = #selector(handleStatusItemClick(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.target = self
         }
         self.statusItem = statusItem
