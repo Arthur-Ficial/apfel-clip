@@ -26,27 +26,23 @@ enum SavedActionIconCatalog {
     ]
 }
 
-// MARK: - Icon picker
+// MARK: - Icon grid (used inline when expanded)
 
-struct IconPickerView: View {
+private struct IconGridView: View {
     @Binding var selectedIcon: String
     private let green = Color(red: 0.16, green: 0.49, blue: 0.22)
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 8)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Icon")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 6) {
-                    ForEach(SavedActionIconCatalog.all, id: \.self) { symbol in
-                        iconCell(symbol)
-                    }
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(SavedActionIconCatalog.all, id: \.self) { symbol in
+                    iconCell(symbol)
                 }
             }
-            .frame(maxHeight: 200)
+            .padding(4)
         }
+        .frame(maxHeight: 188)
     }
 
     private func iconCell(_ symbol: String) -> some View {
@@ -59,10 +55,10 @@ struct IconPickerView: View {
                         .stroke(isSelected ? green : Color.clear, lineWidth: 1.5)
                 )
             Image(systemName: symbol)
-                .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
+                .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? green : Color.primary)
         }
-        .frame(width: 38, height: 38)
+        .frame(width: 36, height: 36)
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.12)) { selectedIcon = symbol }
@@ -85,6 +81,7 @@ struct SavedActionFormView: View {
     @State private var name: String
     @State private var selectedIcon: String
     @State private var selectedTypes: Set<ContentType>
+    @State private var isIconGridVisible = false
 
     private let green = Color(red: 0.16, green: 0.49, blue: 0.22)
 
@@ -122,6 +119,7 @@ struct SavedActionFormView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+
             // Prompt preview
             VStack(alignment: .leading, spacing: 4) {
                 Text("Prompt")
@@ -140,26 +138,57 @@ struct SavedActionFormView: View {
                     )
             }
 
-            // Name field
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Action name")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                TextField("e.g. Translate to Italian", text: $name)
-                    .textFieldStyle(.plain)
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.white.opacity(0.9))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(!name.isEmpty ? green.opacity(0.4) : Color.clear, lineWidth: 1)
-                    )
+            // Icon button + Name field on same row
+            HStack(alignment: .bottom, spacing: 10) {
+                // Prominent icon button — always visible, tap to toggle grid
+                VStack(spacing: 4) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) { isIconGridVisible.toggle() }
+                    } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(isIconGridVisible ? green.opacity(0.15) : Color.white.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(isIconGridVisible ? green : green.opacity(0.25), lineWidth: 1.5)
+                                )
+                            Image(systemName: selectedIcon)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(green)
+                        }
+                        .frame(width: 48, height: 48)
+                    }
+                    .buttonStyle(.plain)
+                    Text(isIconGridVisible ? "Close" : "Icon")
+                        .font(.caption2)
+                        .foregroundStyle(green)
+                }
+
+                // Name field
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Action name")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    TextField("e.g. Translate to Italian", text: $name)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white.opacity(0.9))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(!name.isEmpty ? green.opacity(0.4) : Color.clear, lineWidth: 1)
+                        )
+                        .frame(height: 36)
+                }
             }
 
-            // Icon picker
-            IconPickerView(selectedIcon: $selectedIcon)
+            // Icon grid — expands inline on demand
+            if isIconGridVisible {
+                IconGridView(selectedIcon: $selectedIcon)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
 
             // Content type toggles
             VStack(alignment: .leading, spacing: 6) {

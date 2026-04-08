@@ -1,6 +1,8 @@
 import Foundation
 import Observation
 
+enum MoveDirection: Sendable { case up, down }
+
 @MainActor
 @Observable
 final class PopoverViewModel {
@@ -20,6 +22,7 @@ final class PopoverViewModel {
     var isRunning = false
     var runningActionID: String?
     var isSaveFormVisible: Bool = false
+    var isSaveResultFormVisible: Bool = false
     var editingSavedActionID: String? = nil
     var serverState: ClipServerState = .starting
     var controlPort: Int?
@@ -159,6 +162,7 @@ final class PopoverViewModel {
 
     func returnToPrimaryPanel() {
         isSaveFormVisible = false
+        isSaveResultFormVisible = false
         editingSavedActionID = nil
         screen = settings.preferredPanel.screen
     }
@@ -239,7 +243,8 @@ final class PopoverViewModel {
                 actionName: "Custom Prompt",
                 input: clipboardText,
                 output: output,
-                fromHistory: false
+                fromHistory: false,
+                sourcePrompt: effectivePrompt
             )
             customPrompt = ""
             return state
@@ -345,6 +350,14 @@ final class PopoverViewModel {
         await persistSettings()
     }
 
+    func moveSavedAction(_ id: String, direction: MoveDirection) async {
+        guard let i = settings.savedCustomActions.firstIndex(where: { $0.id == id }) else { return }
+        let target = direction == .up ? i - 1 : i + 1
+        guard settings.savedCustomActions.indices.contains(target) else { return }
+        settings.savedCustomActions.swapAt(i, target)
+        await persistSettings()
+    }
+
     func updateAutoCopy(_ enabled: Bool) async {
         settings.autoCopy = enabled
         await persistSettings()
@@ -414,7 +427,8 @@ final class PopoverViewModel {
         actionName: String,
         input: String,
         output: String,
-        fromHistory: Bool
+        fromHistory: Bool,
+        sourcePrompt: String? = nil
     ) async -> ClipResultState {
         let trimmedOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)
         let shouldCopy = settings.autoCopy
@@ -424,7 +438,8 @@ final class PopoverViewModel {
             input: input,
             output: trimmedOutput,
             copiedToClipboard: shouldCopy,
-            createdFromHistory: fromHistory
+            createdFromHistory: fromHistory,
+            sourcePrompt: sourcePrompt
         )
         result = newResult
         screen = .result

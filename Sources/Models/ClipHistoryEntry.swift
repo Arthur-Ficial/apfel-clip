@@ -32,6 +32,7 @@ struct ClipResultState: Equatable, Sendable {
     var output: String
     var copiedToClipboard: Bool
     var createdFromHistory: Bool
+    var sourcePrompt: String?   // set for custom-prompt runs; enables "Save as Action" from result
 }
 
 struct ClipBanner: Equatable, Sendable {

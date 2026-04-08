@@ -473,19 +473,21 @@ struct PopoverRootView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 VStack(spacing: 6) {
-                    ForEach(saved) { action in
-                        savedActionRow(action)
+                    ForEach(Array(saved.enumerated()), id: \.element.id) { index, action in
+                        savedActionRow(action, index: index, total: saved.count)
                     }
                 }
             }
         }
     }
 
-    private func savedActionRow(_ saved: SavedCustomAction) -> some View {
+    private func savedActionRow(_ saved: SavedCustomAction, index: Int, total: Int) -> some View {
         let green = Color(red: 0.16, green: 0.49, blue: 0.22)
         let isExpanded = viewModel.editingSavedActionID == saved.id
+        let isFirst = index == 0
+        let isLast = index == total - 1
         return VStack(spacing: 6) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: saved.icon)
                     .font(.system(size: 14, weight: .medium))
                     .frame(width: 18)
@@ -501,21 +503,52 @@ struct PopoverRootView: View {
 
                 Spacer()
 
+                // Reorder arrows
+                HStack(spacing: 0) {
+                    Button {
+                        Task { await viewModel.moveSavedAction(saved.id, direction: .up) }
+                    } label: {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 10, weight: .semibold))
+                            .frame(width: 22, height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isFirst ? Color.secondary.opacity(0.3) : Color.secondary)
+                    .disabled(isFirst)
+
+                    Button {
+                        Task { await viewModel.moveSavedAction(saved.id, direction: .down) }
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .frame(width: 22, height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isLast ? Color.secondary.opacity(0.3) : Color.secondary)
+                    .disabled(isLast)
+                }
+
+                // Edit toggle
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         viewModel.editingSavedActionID = isExpanded ? nil : saved.id
                     }
                 } label: {
                     Image(systemName: isExpanded ? "xmark" : "pencil")
+                        .font(.system(size: 12))
+                        .frame(width: 22, height: 22)
                         .foregroundStyle(isExpanded ? Color.primary : Color.secondary)
                 }
                 .buttonStyle(.plain)
                 .disabled(viewModel.runningActionID == saved.id)
 
+                // Delete
                 Button {
                     Task { await viewModel.deleteSavedAction(saved.id) }
                 } label: {
                     Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .frame(width: 22, height: 22)
                         .foregroundStyle(Color.red.opacity(0.7))
                 }
                 .buttonStyle(.plain)
@@ -526,6 +559,23 @@ struct PopoverRootView: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color.white.opacity(0.78))
             )
+            .contextMenu {
+                if !isFirst {
+                    Button("Move Up") { Task { await viewModel.moveSavedAction(saved.id, direction: .up) } }
+                }
+                if !isLast {
+                    Button("Move Down") { Task { await viewModel.moveSavedAction(saved.id, direction: .down) } }
+                }
+                Divider()
+                Button("Edit") {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        viewModel.editingSavedActionID = isExpanded ? nil : saved.id
+                    }
+                }
+                Button("Delete", role: .destructive) {
+                    Task { await viewModel.deleteSavedAction(saved.id) }
+                }
+            }
 
             if isExpanded {
                 SavedActionFormView(
@@ -742,6 +792,22 @@ struct PopoverRootView: View {
 
                         Spacer(minLength: 0)
 
+                        // "Save as Action" form (custom-prompt results only)
+                        if viewModel.isSaveResultFormVisible, let prompt = result.sourcePrompt {
+                            SavedActionFormView(
+                                mode: .create(prompt: prompt),
+                                onSave: { name, icon, types in
+                                    Task {
+                                        await viewModel.saveCustomAction(name: name, icon: icon, prompt: prompt, contentTypes: types)
+                                        withAnimation { viewModel.isSaveResultFormVisible = false }
+                                        viewModel.showBanner(.init(style: .success, title: "Action saved", detail: name))
+                                    }
+                                },
+                                onCancel: { withAnimation { viewModel.isSaveResultFormVisible = false } }
+                            )
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+
                         HStack {
                             Button {
                                 viewModel.returnToPrimaryPanel()
@@ -752,6 +818,22 @@ struct PopoverRootView: View {
                             .foregroundStyle(.secondary)
 
                             Spacer()
+
+                            // Save as Action — only for custom prompt results
+                            if result.actionID == "custom", result.sourcePrompt != nil {
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        viewModel.isSaveResultFormVisible.toggle()
+                                    }
+                                } label: {
+                                    Label(
+                                        viewModel.isSaveResultFormVisible ? "Cancel" : "Save as Action",
+                                        systemImage: viewModel.isSaveResultFormVisible ? "xmark" : "bookmark.badge.plus"
+                                    )
+                                }
+                                .buttonStyle(.bordered)
+                                .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                            }
 
                             Button {
                                 Task { _ = try? await viewModel.runAction(id: result.actionID) }
