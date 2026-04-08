@@ -44,7 +44,7 @@
     "description": "AI-powered clipboard actions for macOS. On-device, private, no API keys required.",
     "url": "https://apfel-clip.franzai.com/",
     "downloadUrl": "https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip",
-    "softwareVersion": "0.3.1",
+    "softwareVersion": "0.3.2",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -720,7 +720,7 @@
       <div class="i-primary-text">
         <h3>Download</h3>
         <p>Download the zip, unzip, drag <strong>apfel-clip.app</strong> to your Applications folder, and open it. That is it.</p>
-        <a class="btn-green" href="https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Download free (arm64)</a>
+        <a class="btn-green" id="download-btn" href="https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> <span id="download-label">Download free (arm64)</span></a>
         <p class="i-note" style="margin-top:10px;">Signed and notarised by Apple. macOS opens it without any security warning. SHA-256 checksums in each <a href="https://github.com/Arthur-Ficial/apfel-clip/releases" style="color:var(--brand)">release</a>.</p>
       </div>
       <div class="after">
@@ -865,6 +865,20 @@ cd apfel-clip &amp;&amp; make install</pre>
 </footer>
 
 <script>
+// Resolve latest release version and point download button at the versioned zip
+fetch('https://api.github.com/repos/Arthur-Ficial/apfel-clip/releases/latest')
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var tag = data.tag_name; // e.g. "v0.3.2"
+    if (!tag) return;
+    var url = 'https://github.com/Arthur-Ficial/apfel-clip/releases/download/' + tag + '/apfel-clip-' + tag + '-macos-arm64.zip';
+    var btn = document.getElementById('download-btn');
+    var label = document.getElementById('download-label');
+    if (btn) btn.href = url;
+    if (label) label.textContent = 'Download ' + tag + ' (arm64)';
+  })
+  .catch(function() {}); // silently keep default href on error
+
 document.querySelectorAll('pre').forEach(function(pre) {
   var wrap = document.createElement('div');
   wrap.className = 'pre-wrap';

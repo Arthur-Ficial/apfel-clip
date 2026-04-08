@@ -4,74 +4,16 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-release:
-    runs-on: macos-latest
+  deploy-site:
+    runs-on: ubuntu-latest
     steps:
       - name: Check out
         uses: actions/checkout@v4
-
-      - name: Install apfel helper
-        run: |
-          brew tap Arthur-Ficial/tap
-          brew install apfel
-
-      - name: Test
-        run: swift test
-
-      - name: Import Developer ID certificate
-        if: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_P12 != '' && secrets.APPLE_DEVELOPER_ID_APPLICATION_PASSWORD != '' && secrets.APPLE_DEVELOPER_ID_APPLICATION_NAME != '' }}
-        env:
-          APPLE_DEVELOPER_ID_APPLICATION_P12: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_P12 }}
-          APPLE_DEVELOPER_ID_APPLICATION_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_PASSWORD }}
-        run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/apfel-clip-signing.keychain-db"
-          KEYCHAIN_PASSWORD="$(uuidgen)"
-          CERT_PATH="$RUNNER_TEMP/developer-id-application.p12"
-          echo "$APPLE_DEVELOPER_ID_APPLICATION_P12" | base64 --decode > "$CERT_PATH"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$APPLE_DEVELOPER_ID_APPLICATION_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
-          echo "BUILD_KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
-          echo "BUILD_KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
-
-      - name: Configure notarytool credentials
-        if: ${{ secrets.APPLE_NOTARY_APPLE_ID != '' && secrets.APPLE_NOTARY_TEAM_ID != '' && secrets.APPLE_NOTARY_PASSWORD != '' && env.BUILD_KEYCHAIN_PATH != '' }}
-        env:
-          APPLE_NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
-          APPLE_NOTARY_TEAM_ID: ${{ secrets.APPLE_NOTARY_TEAM_ID }}
-          APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
-        run: |
-          xcrun notarytool store-credentials apfel-clip-notary \
-            --apple-id "$APPLE_NOTARY_APPLE_ID" \
-            --team-id "$APPLE_NOTARY_TEAM_ID" \
-            --password "$APPLE_NOTARY_PASSWORD" \
-            --keychain "$BUILD_KEYCHAIN_PATH"
-          echo "KEYCHAIN_PROFILE=apfel-clip-notary" >> "$GITHUB_ENV"
-
-      - name: Build release artifacts
-        env:
-          SIGN_IDENTITY: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_NAME }}
-          KEYCHAIN_PROFILE: ${{ env.KEYCHAIN_PROFILE }}
-        run: ./scripts/build-dist.sh
-
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/apfel-clip-v*-macos-arm64.zip
-            dist/apfel-clip-macos-arm64.zip
-            dist/apfel-clip-v*-cli-macos-arm64.tar.gz
-            dist/SHA256SUMS
-            dist/homebrew/apfel-clip.rb
 
       - name: Deploy website to Cloudflare Pages
         env:
