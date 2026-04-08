@@ -77,35 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
 
     func buildContextMenu() -> NSMenu {
         let menu = NSMenu()
-
-        let openItem = NSMenuItem(title: "Open apfel-clip", action: #selector(showPopover), keyEquivalent: "")
-        menu.addItem(openItem)
-
+        menu.addItem(NSMenuItem(title: "Open apfel-clip", action: #selector(showPopover), keyEquivalent: ""))
         menu.addItem(.separator())
-
-        let launchItem = NSMenuItem(
-            title: viewModel?.settings.launchAtLoginEnabled == true ? "Disable Launch at Login" : "Enable Launch at Login",
-            action: #selector(toggleLaunchAtLogin),
-            keyEquivalent: ""
-        )
-        menu.addItem(launchItem)
-
-        let autoCopyItem = NSMenuItem(
-            title: viewModel?.settings.autoCopy == true ? "Disable Auto-Copy" : "Enable Auto-Copy",
-            action: #selector(toggleAutoCopy),
-            keyEquivalent: ""
-        )
-        menu.addItem(autoCopyItem)
-
-        menu.addItem(.separator())
-
-        let quitItem = NSMenuItem(
-            title: "Quit apfel-clip",
-            action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q"
-        )
-        menu.addItem(quitItem)
-
+        menu.addItem(NSMenuItem(title: "Quit apfel-clip", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         return menu
     }
 

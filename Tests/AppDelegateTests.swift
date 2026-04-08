@@ -6,15 +6,15 @@ import Testing
 @MainActor
 struct AppDelegateTests {
 
-    @Test("Context menu has Open, Launch at Login, Auto-Copy, and Quit items")
+    @Test("Context menu has Open and Quit items")
     func contextMenuHasExpectedItems() {
         let delegate = AppDelegate()
         let menu = delegate.buildContextMenu()
         let titles = menu.items.map { $0.title }
         #expect(titles.contains("Open apfel-clip"))
-        #expect(titles.contains(where: { $0.contains("Launch at Login") }))
-        #expect(titles.contains(where: { $0.contains("Auto-Copy") }))
         #expect(titles.contains("Quit apfel-clip"))
+        #expect(!titles.contains(where: { $0.contains("Launch at Login") }))
+        #expect(!titles.contains(where: { $0.contains("Auto-Copy") }))
     }
 
     @Test("Context menu last item is Quit with terminate action")
