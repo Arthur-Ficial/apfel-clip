@@ -53,6 +53,24 @@ python3 -m http.server "$PORT" --directory "$DIST_DIR" >/tmp/apfel-clip-install-
 SERVER_PID=$!
 sleep 1
 
+assert_signed_and_notarized() {
+  local app="$1"
+  local label="$2"
+  codesign --verify --deep --strict "$app" \
+    || { print "FAIL [$label]: codesign invalid"; exit 1; }
+  xcrun stapler validate "$app" >/dev/null 2>&1 \
+    || { print "FAIL [$label]: notarization ticket missing (app will show 'damaged' when downloaded)"; exit 1; }
+  spctl --assess --type exec "$app" >/dev/null 2>&1 \
+    || { print "FAIL [$label]: Gatekeeper rejected (source not Notarized Developer ID)"; exit 1; }
+  print "  OK: signed + notarized + Gatekeeper accepted [$label]"
+}
+
+print "==> 0/4 Verify dist zip contains notarized app"
+VERIFY_TMP="$(mktemp -d)"
+ditto -x -k "$ZIP_PATH" "$VERIFY_TMP"
+assert_signed_and_notarized "$VERIFY_TMP/apfel-clip.app" "zip contents"
+rm -rf "$VERIFY_TMP"
+
 print "==> 1/4 Homebrew tap install"
 APP_URL_OVERRIDE="$ASSET_URL" "$ROOT_DIR/scripts/render-homebrew-cask.sh" "$VERSION" "$SHA" > "$TMP_ROOT/apfel-clip.rb"
 if brew tap | rg -qx "$TAP_NAME"; then
@@ -65,7 +83,7 @@ cp "$TMP_ROOT/apfel-clip.rb" "$TAP_DIR/Casks/apfel-clip.rb"
 HOMEBREW_APPDIR="$TMP_ROOT/homebrew/Applications"
 brew install --cask "$TAP_NAME/apfel-clip" --appdir="$HOMEBREW_APPDIR" >/dev/null
 [[ -d "$HOMEBREW_APPDIR/apfel-clip.app" ]]
-codesign --verify --deep --strict "$HOMEBREW_APPDIR/apfel-clip.app"
+assert_signed_and_notarized "$HOMEBREW_APPDIR/apfel-clip.app" "homebrew"
 brew uninstall --cask "$TAP_NAME/apfel-clip" >/dev/null
 brew untap "$TAP_NAME" >/dev/null
 
@@ -76,7 +94,7 @@ cp "$ZIP_PATH" "$TMP_ROOT/"
   unzip -q "$(basename "$ZIP_PATH")"
 )
 [[ -d "$TMP_ROOT/apfel-clip.app" ]]
-codesign --verify --deep --strict "$TMP_ROOT/apfel-clip.app"
+assert_signed_and_notarized "$TMP_ROOT/apfel-clip.app" "zip-unzip"
 
 print "==> 3/4 curl installer"
 APP_DIR="$TMP_ROOT/curl/Applications" \
@@ -85,12 +103,14 @@ ASSET_URL_OVERRIDE="$ASSET_URL" \
   "$ROOT_DIR/scripts/install.sh" >/dev/null
 [[ -d "$TMP_ROOT/curl/Applications/apfel-clip.app" ]]
 [[ -L "$TMP_ROOT/curl/bin/apfel-clip" ]]
-codesign --verify --deep --strict "$TMP_ROOT/curl/Applications/apfel-clip.app"
+assert_signed_and_notarized "$TMP_ROOT/curl/Applications/apfel-clip.app" "curl-installer"
 
 print "==> 4/4 Build from source"
 make -C "$ROOT_DIR" install-cli APP_DIR="$TMP_ROOT/source/Applications" BIN_DIR="$TMP_ROOT/source/bin" >/dev/null
 [[ -d "$TMP_ROOT/source/Applications/apfel-clip.app" ]]
 [[ -L "$TMP_ROOT/source/bin/apfel-clip" ]]
-codesign --verify --deep --strict "$TMP_ROOT/source/Applications/apfel-clip.app"
+codesign --verify --deep --strict "$TMP_ROOT/source/Applications/apfel-clip.app" \
+  || { print "FAIL [source]: codesign invalid"; exit 1; }
+print "  OK: codesign valid [source] (source builds are not notarized — expected)"
 
 print "==> All install methods passed"
