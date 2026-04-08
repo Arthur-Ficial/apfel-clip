@@ -12,11 +12,13 @@ struct ClipControlAPITests {
         clipboard.currentText = "original"
         let historyStore = MockHistoryStore()
         let settingsStore = MockSettingsStore()
+        let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            launchAtLoginController: launchAtLoginController
         )
         await viewModel.loadPersistedState()
         viewModel.refreshFromClipboard()
@@ -62,14 +64,16 @@ struct ClipControlAPITests {
         let response = await api.handle(
             method: "POST",
             path: "/settings",
-            body: #"{"auto_copy":false,"preferred_panel":"history","favorite_action_ids":["fix-grammar"],"hidden_action_ids":["translate-ja"]}"#
+            body: #"{"auto_copy":false,"launch_at_login":false,"preferred_panel":"history","favorite_action_ids":["fix-grammar"],"hidden_action_ids":["translate-ja"]}"#
         )
         let json = try parse(response)
 
         #expect(viewModel.settings.autoCopy == false)
+        #expect(viewModel.settings.launchAtLoginEnabled == false)
         #expect(viewModel.settings.preferredPanel == .history)
         #expect(viewModel.settings.favoriteActionIDs == ["fix-grammar"])
         #expect(viewModel.settings.hiddenActionIDs == ["translate-ja"])
+        #expect(json["launch_at_login"] as? Bool == false)
         #expect(json["favorite_action_ids"] as? [String] == ["fix-grammar"])
         #expect(json["hidden_action_ids"] as? [String] == ["translate-ja"])
     }

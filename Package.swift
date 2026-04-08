@@ -13,6 +13,7 @@ let package = Package(
             name: "apfel-clip",
             path: "Sources",
             linkerSettings: [
+                .linkedFramework("ServiceManagement"),
                 .unsafeFlags([
                     "-Xlinker", "-sectcreate",
                     "-Xlinker", "__TEXT",

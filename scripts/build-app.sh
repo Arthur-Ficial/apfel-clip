@@ -7,6 +7,8 @@ APP_BUNDLE="$ROOT_DIR/build/${APP_NAME}.app"
 VERSION="$(tr -d '\n' < "$ROOT_DIR/.version")"
 ICON_SOURCE="$ROOT_DIR/Resources/AppIcon.icns"
 ICON_SCRIPT="$ROOT_DIR/scripts/generate-icon.swift"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+ENTITLEMENTS="${ENTITLEMENTS:-}"
 
 resolve_helper() {
   if [[ -n "${APFEL_HELPER_PATH:-}" && -x "${APFEL_HELPER_PATH}" ]]; then
@@ -20,6 +22,33 @@ resolve_helper() {
   fi
 
   return 1
+}
+
+codesign_path() {
+  local target="$1"
+  shift || true
+
+  if [[ "$SIGN_IDENTITY" == "-" ]]; then
+    codesign --force --sign "$SIGN_IDENTITY" "$@" "$target"
+  else
+    codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$@" "$target"
+  fi
+}
+
+sign_bundle() {
+  xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+
+  if [[ -x "$APP_BUNDLE/Contents/Helpers/apfel" ]]; then
+    codesign_path "$APP_BUNDLE/Contents/Helpers/apfel"
+  fi
+
+  if [[ -n "$ENTITLEMENTS" ]]; then
+    codesign_path "$APP_BUNDLE" --entitlements "$ENTITLEMENTS"
+  else
+    codesign_path "$APP_BUNDLE"
+  fi
+
+  codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 }
 
 print "==> Building ${APP_NAME} ${VERSION}"
@@ -54,5 +83,8 @@ else
   print "==> Warning: no apfel helper was found; packaged app will require apfel on PATH"
   rmdir "$APP_BUNDLE/Contents/Helpers" 2>/dev/null || true
 fi
+
+print "==> Signing bundle (${SIGN_IDENTITY})"
+sign_bundle
 
 print "==> Built ${APP_BUNDLE}"

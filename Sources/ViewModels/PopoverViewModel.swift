@@ -10,6 +10,7 @@ final class PopoverViewModel {
     private let clipboardService: any ClipboardService
     private let historyStore: any ClipHistoryStoring
     private let settingsStore: any ClipSettingsStoring
+    private let launchAtLoginController: any LaunchAtLoginControlling
 
     var screen: ClipScreen = .actions
     var clipboardText: String = ""
@@ -32,12 +33,14 @@ final class PopoverViewModel {
         actionExecutor: any ClipActionExecuting,
         clipboardService: any ClipboardService,
         historyStore: any ClipHistoryStoring,
-        settingsStore: any ClipSettingsStoring
+        settingsStore: any ClipSettingsStoring,
+        launchAtLoginController: any LaunchAtLoginControlling
     ) {
         self.actionExecutor = actionExecutor
         self.clipboardService = clipboardService
         self.historyStore = historyStore
         self.settingsStore = settingsStore
+        self.launchAtLoginController = launchAtLoginController
     }
 
     var availableActions: [ClipAction] {
@@ -387,6 +390,56 @@ final class PopoverViewModel {
     func updateAutoCopy(_ enabled: Bool) async {
         settings.autoCopy = enabled
         await persistSettings()
+    }
+
+    func updateLaunchAtLogin(_ enabled: Bool) async {
+        let previous = settings.launchAtLoginEnabled
+        settings.launchAtLoginEnabled = enabled
+        settings.launchAtLoginPromptShown = true
+
+        do {
+            try launchAtLoginController.setEnabled(enabled)
+            await persistSettings()
+            showBanner(
+                ClipBanner(
+                    style: .success,
+                    title: enabled ? "Starts at login" : "Launch at login disabled",
+                    detail: enabled ? "apfel-clip will open when you sign in." : nil,
+                    autoDismiss: true
+                )
+            )
+        } catch {
+            settings.launchAtLoginEnabled = previous
+            await persistSettings()
+            showBanner(
+                ClipBanner(
+                    style: .error,
+                    title: "Launch at login failed",
+                    detail: error.localizedDescription
+                )
+            )
+        }
+    }
+
+    func applySavedLaunchAtLoginPreference() async {
+        guard settings.launchAtLoginPromptShown else { return }
+
+        do {
+            try launchAtLoginController.setEnabled(settings.launchAtLoginEnabled)
+        } catch {
+            showBanner(
+                ClipBanner(
+                    style: .error,
+                    title: "Launch at login failed",
+                    detail: error.localizedDescription
+                )
+            )
+        }
+    }
+
+    func completeLaunchAtLoginPrompt(enable: Bool) async {
+        settings.launchAtLoginPromptShown = true
+        await updateLaunchAtLogin(enable)
     }
 
     func useRecentPrompt(_ prompt: String) {

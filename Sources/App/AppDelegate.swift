@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
     private let actionExecutor = ConfigurableClipActionExecutor()
     private let historyStore = FileHistoryStore()
     private let settingsStore = UserDefaultsSettingsStore()
+    private let launchAtLoginController = SystemLaunchAtLoginController()
     private let serverManager = ServerManager()
 
     private var viewModel: PopoverViewModel?
@@ -21,7 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
             actionExecutor: actionExecutor,
             clipboardService: clipboardService,
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            launchAtLoginController: launchAtLoginController
         )
         self.viewModel = viewModel
 
@@ -68,6 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         // UI is never shown in an empty-defaults state.
         await viewModel.loadPersistedState()
         configurePopover(viewModel: viewModel)
+        await configureLaunchAtLogin(viewModel: viewModel)
 
         viewModel.attachClipboardListener()
         clipboardService.start()
@@ -127,6 +130,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
                 self?.togglePopover(nil)
             }
         }
+    }
+
+    private func configureLaunchAtLogin(viewModel: PopoverViewModel) async {
+        if viewModel.settings.launchAtLoginPromptShown {
+            await viewModel.applySavedLaunchAtLoginPreference()
+            return
+        }
+
+        let shouldEnable = promptForLaunchAtLogin()
+        await viewModel.completeLaunchAtLoginPrompt(enable: shouldEnable)
+    }
+
+    private func promptForLaunchAtLogin() -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Start apfel-clip at login?"
+        alert.informativeText = "Keep apfel-clip ready in your menu bar every time you sign in. You can change this later in Settings."
+        alert.addButton(withTitle: "Enable at Login")
+        alert.addButton(withTitle: "Not Now")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     // MARK: - NSPopoverDelegate

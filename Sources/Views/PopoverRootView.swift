@@ -364,6 +364,28 @@ struct PopoverRootView: View {
             SurfaceCard {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle(isOn: Binding(
+                        get: { viewModel.settings.launchAtLoginEnabled },
+                        set: { enabled in
+                            Task {
+                                await viewModel.updateLaunchAtLogin(enabled)
+                            }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Launch at login")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Open apfel-clip automatically when you sign in.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                }
+            }
+
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(isOn: Binding(
                         get: { viewModel.settings.autoCopy },
                         set: { enabled in
                             Task {

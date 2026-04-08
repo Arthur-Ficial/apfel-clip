@@ -4,6 +4,8 @@
 
 Copy text, code, JSON, logs, or an error. Hit **⌘⇧V**. Pick an action. Paste the result. Everything runs locally via [apfel](https://github.com/Arthur-Ficial/apfel) — no API keys, no cloud, no data leaving your machine.
 
+**[apfel-clip.franzai.com](https://apfel-clip.franzai.com)**
+
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B%20Tahoe-blue.svg)](https://www.apple.com/macos/)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2B-black.svg)](https://www.apple.com/mac/)
@@ -78,32 +80,18 @@ You need all three before installing:
 
 ## Install
 
-### Option 1 — One-liner (recommended)
-
-Open Terminal and paste:
-
-```zsh
-curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | zsh
-```
-
-Installs `apfel-clip.app` to `/Applications` and links `apfel-clip` into `~/.local/bin`. Done in ~5 seconds.
-
-### Option 2 — Homebrew
+### Option 1 — Homebrew (recommended)
 
 ```bash
-# Add the tap once (you only need to do this once)
-brew tap Arthur-Ficial/tap
-
-# Install the cask (the --cask flag is required)
-brew install --cask apfel-clip
+brew install Arthur-Ficial/tap/apfel-clip
 
 # Update later
-brew upgrade --cask apfel-clip
+brew upgrade apfel-clip
 ```
 
 > Don't have Homebrew? Install it at [brew.sh](https://brew.sh).
 
-### Option 3 — Direct download (zip)
+### Option 2 — Direct download (zip)
 
 1. Download **[apfel-clip-macos-arm64.zip](https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip)** from the [latest release](https://github.com/Arthur-Ficial/apfel-clip/releases/latest)
 2. Unzip it
@@ -113,6 +101,16 @@ brew upgrade --cask apfel-clip
 # Verify SHA-256 (optional — checksums in SHA256SUMS in each release)
 shasum -a 256 apfel-clip-macos-arm64.zip
 ```
+
+### Option 3 — One-liner installer
+
+Open Terminal and paste:
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | zsh
+```
+
+Installs `apfel-clip.app` to `/Applications` and links `apfel-clip` into `~/.local/bin`.
 
 ### Option 4 — Build from source
 
@@ -128,11 +126,13 @@ Requires Xcode command-line tools and `apfel` on your `PATH`.
 
 ## First launch — Gatekeeper
 
-macOS will block the app on first open with a security warning because it isn't notarised.
+Distributed builds (Homebrew, zip download, installer) are signed and notarised — macOS will open them without any security warning.
 
-**To open it:** Right-click (or Control-click) `apfel-clip.app` → **Open** → **Open**
+If you build from source, macOS will show a Gatekeeper warning on first open because the local build is not notarised.
 
-You only need to do this once. The warning won't appear again.
+**To open a source build:** Right-click (or Control-click) `apfel-clip.app` → **Open** → **Open**
+
+You only need to do this once. The warning will not appear again.
 
 ---
 
@@ -196,10 +196,11 @@ MVVM, `@Observable` ViewModel, Swift actors for stores. No external Swift packag
 
 ```bash
 swift build          # debug build
-swift test           # run 52 tests
+swift test           # run 53 tests
 make app             # build app bundle → build/apfel-clip.app
 make install         # build + copy to /Applications
 make dist            # build release zip + CLI tarball + checksums
+./scripts/test-install-methods.sh
 ```
 
 Tests cover persistence, ViewModel CRUD, content detection, action execution, and the control API.

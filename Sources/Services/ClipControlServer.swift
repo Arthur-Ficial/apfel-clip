@@ -88,6 +88,7 @@ final class ClipControlAPI: @unchecked Sendable {
                 "screen": viewModel.screen.rawValue,
                 "preferred_panel": viewModel.settings.preferredPanel.rawValue,
                 "is_running": viewModel.isRunning,
+                "launch_at_login": viewModel.settings.launchAtLoginEnabled,
                 "clipboard_text": viewModel.clipboardText,
                 "content_type": viewModel.contentType.rawValue,
                 "history_count": viewModel.history.count,
@@ -183,6 +184,7 @@ final class ClipControlAPI: @unchecked Sendable {
         await MainActor.run { () -> String in
             ok([
                 "auto_copy": viewModel.settings.autoCopy,
+                "launch_at_login": viewModel.settings.launchAtLoginEnabled,
                 "preferred_panel": viewModel.settings.preferredPanel.rawValue,
                 "recent_custom_prompts": viewModel.settings.recentCustomPrompts,
                 "favorite_action_ids": viewModel.settings.favoriteActionIDs,
@@ -197,6 +199,7 @@ final class ClipControlAPI: @unchecked Sendable {
         }
 
         let autoCopy = object["auto_copy"] as? Bool
+        let launchAtLogin = object["launch_at_login"] as? Bool
         let preferredPanel = (object["preferred_panel"] as? String).flatMap(ClipPrimaryPanel.init(rawValue:))
         let prompts = object["recent_custom_prompts"] as? [String]
         let favoriteActionIDs = object["favorite_action_ids"] as? [String]
@@ -209,6 +212,9 @@ final class ClipControlAPI: @unchecked Sendable {
             favoriteActionIDs: favoriteActionIDs,
             hiddenActionIDs: hiddenActionIDs
         )
+        if let launchAtLogin {
+            await viewModel.updateLaunchAtLogin(launchAtLogin)
+        }
         return await settings()
     }
 

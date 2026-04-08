@@ -44,6 +44,8 @@ extension SavedCustomAction {
 
 struct ClipSettings: Codable, Equatable, Sendable {
     var autoCopy: Bool = false
+    var launchAtLoginEnabled: Bool = true
+    var launchAtLoginPromptShown: Bool = false
     var recentCustomPrompts: [String] = []
     var preferredPanel: ClipPrimaryPanel = .actions
     var favoriteActionIDs: [String] = []

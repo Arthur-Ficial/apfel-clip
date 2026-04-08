@@ -57,11 +57,13 @@ struct SavedCustomActionViewModelTests {
         let clipboard = MockClipboardService()
         let historyStore = MockHistoryStore()
         let settingsStore = MockSettingsStore()
+        let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            launchAtLoginController: launchAtLoginController
         )
         return (viewModel, settingsStore)
     }
@@ -190,11 +192,13 @@ struct SavedCustomActionViewModelTests {
         let clipboard = MockClipboardService()
         let historyStore = MockHistoryStore()
         let settingsStore = MockSettingsStore()
+        let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            launchAtLoginController: launchAtLoginController
         )
 
         await executor.setNextResult("Arrr matey")

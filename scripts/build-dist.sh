@@ -11,13 +11,19 @@ APP_ZIP="$DIST_DIR/${APP_NAME}-macos-${ARCH}.zip"
 CLI_STAGE="$DIST_DIR/${APP_NAME}-cli"
 CLI_TARBALL="$DIST_DIR/${APP_NAME}-cli-macos-${ARCH}.tar.gz"
 SHA_FILE="$DIST_DIR/SHA256SUMS"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+KEYCHAIN_PROFILE="${KEYCHAIN_PROFILE:-}"
 
 "$ROOT_DIR/scripts/build-app.sh"
+
+if [[ "$SIGN_IDENTITY" != "-" && -n "$KEYCHAIN_PROFILE" ]]; then
+  "$ROOT_DIR/scripts/notarize.sh" "$APP_BUNDLE"
+fi
 
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR/homebrew" "$CLI_STAGE"
 
-ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$APP_ZIP"
+COPYFILE_DISABLE=1 ditto -c -k --norsrc --keepParent "$APP_BUNDLE" "$APP_ZIP"
 
 cp "$APP_BUNDLE/Contents/MacOS/${APP_NAME}" "$CLI_STAGE/${APP_NAME}"
 chmod +x "$CLI_STAGE/${APP_NAME}"

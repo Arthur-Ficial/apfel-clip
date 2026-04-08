@@ -10,24 +10,27 @@ struct PopoverViewModelTests {
         MockActionExecutor,
         MockClipboardService,
         MockHistoryStore,
-        MockSettingsStore
+        MockSettingsStore,
+        MockLaunchAtLoginController
     ) {
         let executor = MockActionExecutor()
         let clipboard = MockClipboardService()
         let historyStore = MockHistoryStore()
         let settingsStore = MockSettingsStore()
+        let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            launchAtLoginController: launchAtLoginController
         )
-        return (viewModel, executor, clipboard, historyStore, settingsStore)
+        return (viewModel, executor, clipboard, historyStore, settingsStore, launchAtLoginController)
     }
 
     @Test("Loads persisted settings and history")
     func loadPersistedState() async throws {
-        let (viewModel, _, _, historyStore, settingsStore) = makeViewModel()
+        let (viewModel, _, _, historyStore, settingsStore, _) = makeViewModel()
         try await historyStore.save([
             ClipHistoryEntry(actionID: "fix-grammar", actionName: "Fix grammar", input: "teh", output: "the")
         ])
@@ -44,7 +47,7 @@ struct PopoverViewModelTests {
 
     @Test("Running an action stores a result without auto-copying by default")
     func runActionSuccess() async throws {
-        let (viewModel, executor, clipboard, historyStore, _) = makeViewModel()
+        let (viewModel, executor, clipboard, historyStore, _, _) = makeViewModel()
         await executor.setNextResult("Fixed text")
         clipboard.currentText = "teh text"
         viewModel.refreshFromClipboard()
@@ -61,7 +64,7 @@ struct PopoverViewModelTests {
 
     @Test("Running an action auto-copies when autoCopy is enabled")
     func runActionAutoCopiesToClipboard() async throws {
-        let (viewModel, executor, clipboard, _, settingsStore) = makeViewModel()
+        let (viewModel, executor, clipboard, _, settingsStore, _) = makeViewModel()
         await settingsStore.save(ClipSettings(autoCopy: true))
         await viewModel.loadPersistedState()
         await executor.setNextResult("Fixed text")
@@ -75,7 +78,7 @@ struct PopoverViewModelTests {
 
     @Test("Failed action leaves error banner")
     func runActionFailure() async throws {
-        let (viewModel, executor, clipboard, _, _) = makeViewModel()
+        let (viewModel, executor, clipboard, _, _, _) = makeViewModel()
         await executor.setNextError(ClipServiceError.serverError("Boom"))
         clipboard.currentText = "teh text"
         viewModel.refreshFromClipboard()
@@ -90,7 +93,7 @@ struct PopoverViewModelTests {
 
     @Test("Custom prompt stores prompt in recents")
     func customPromptRecents() async throws {
-        let (viewModel, executor, clipboard, _, settingsStore) = makeViewModel()
+        let (viewModel, executor, clipboard, _, settingsStore, _) = makeViewModel()
         await executor.setNextResult("Pirate text")
         clipboard.currentText = "hello"
         viewModel.refreshFromClipboard()
@@ -106,7 +109,7 @@ struct PopoverViewModelTests {
 
     @Test("Action manager favorites and hides actions")
     func actionManager() async throws {
-        let (viewModel, _, _, _, settingsStore) = makeViewModel()
+        let (viewModel, _, _, _, settingsStore, _) = makeViewModel()
 
         await viewModel.toggleFavorite("fix-grammar")
         await viewModel.toggleHidden("translate-ja")
@@ -123,7 +126,7 @@ struct PopoverViewModelTests {
 
     @Test("Opening history entry shows result without copying to clipboard")
     func openHistoryEntry() {
-        let (viewModel, _, clipboard, _, _) = makeViewModel()
+        let (viewModel, _, clipboard, _, _, _) = makeViewModel()
         let entry = ClipHistoryEntry(
             actionID: "summarize",
             actionName: "Summarize",
@@ -137,5 +140,22 @@ struct PopoverViewModelTests {
         #expect(viewModel.screen == .result)
         #expect(viewModel.result?.copiedToClipboard == false)
         #expect(clipboard.setTextCalls.isEmpty) // must NOT auto-copy on history open
+    }
+
+    @Test("Launch at login defaults on and can be changed")
+    func launchAtLoginSetting() async {
+        let (viewModel, _, _, _, settingsStore, launchAtLoginController) = makeViewModel()
+
+        await viewModel.loadPersistedState()
+        #expect(viewModel.settings.launchAtLoginEnabled == true)
+
+        await viewModel.updateLaunchAtLogin(false)
+
+        #expect(launchAtLoginController.setCalls == [false])
+        #expect(viewModel.settings.launchAtLoginEnabled == false)
+
+        let loaded = await settingsStore.load()
+        #expect(loaded.launchAtLoginEnabled == false)
+        #expect(loaded.launchAtLoginPromptShown == true)
     }
 }
