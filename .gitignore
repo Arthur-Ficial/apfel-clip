@@ -7,3 +7,5 @@ DerivedData/
 build/
 dist/
 .wrangler/
+*.tar.gz
+*.zip
