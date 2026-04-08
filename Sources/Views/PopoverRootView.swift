@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PopoverRootView: View {
     @Bindable var viewModel: PopoverViewModel
+    @State private var hoveredActionID: String?
 
     var body: some View {
         ZStack {
@@ -162,45 +163,71 @@ struct PopoverRootView: View {
                         )
                     } else {
                         ScrollView {
-                            VStack(spacing: 10) {
+                            VStack(spacing: 8) {
                                 ForEach(viewModel.availableActions) { action in
-                                    Button {
-                                        Task {
-                                            _ = try? await viewModel.runAction(action)
-                                        }
-                                    } label: {
-                                        HStack(spacing: 12) {
-                                            Image(systemName: action.icon)
-                                                .font(.system(size: 14, weight: .semibold))
-                                                .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
-                                                .frame(width: 20)
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(action.name)
-                                                    .font(.body.weight(.medium))
-                                                    .foregroundStyle(.primary)
-                                                Text(action.localAction == nil ? "AI action" : "Local action")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            Spacer(minLength: 0)
-                                            Image(systemName: "arrow.right.circle.fill")
-                                                .font(.system(size: 16))
-                                                .foregroundStyle(.tertiary)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 10)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                .fill(Color.white.opacity(0.8))
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
+                                    actionButton(action)
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    private func actionButton(_ action: ClipAction) -> some View {
+        let isThisRunning = viewModel.runningActionID == action.id
+        let isOtherRunning = viewModel.isRunning && !isThisRunning
+        let isHovered = hoveredActionID == action.id && !viewModel.isRunning
+        let green = Color(red: 0.16, green: 0.49, blue: 0.22)
+        let bgColor: Color = isThisRunning ? green.opacity(0.07) : isHovered ? .white : Color.white.opacity(0.8)
+        let subtitleText = isThisRunning ? "Working…" : action.localAction == nil ? "AI action" : "Local action"
+
+        return Button {
+            Task { _ = try? await viewModel.runAction(action) }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    if isThisRunning {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(green)
+                    } else {
+                        Image(systemName: action.icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(green)
+                    }
+                }
+                .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(action.name)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(subtitleText)
+                        .font(.caption)
+                        .foregroundStyle(isThisRunning ? green : .secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(isHovered ? green.opacity(0.5) : Color.secondary.opacity(0.5))
+                    .opacity(isThisRunning ? 0 : 1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(bgColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isThisRunning ? green.opacity(0.25) : Color.clear, lineWidth: 1)
+            )
+            .opacity(isOtherRunning ? 0.4 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: isOtherRunning)
+            .animation(.easeInOut(duration: 0.12), value: isHovered)
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.isRunning)
+        .onHover { hovered in
+            hoveredActionID = hovered ? action.id : nil
         }
     }
 

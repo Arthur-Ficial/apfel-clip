@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, PopoverPresenting {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, PopoverPresenting {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var globalMonitor: Any?
@@ -92,13 +92,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PopoverPresenting {
 
     private func configurePopover(viewModel: PopoverViewModel) {
         let hostingController = NSHostingController(rootView: PopoverRootView(viewModel: viewModel))
-        hostingController.view.frame = CGRect(x: 0, y: 0, width: 480, height: 720)
+        hostingController.view.frame = CGRect(x: 0, y: 0, width: 540, height: 820)
 
         let popover = NSPopover()
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 480, height: 720)
+        popover.contentSize = NSSize(width: 540, height: 820)
         popover.contentViewController = hostingController
         self.popover = popover
+        popover.delegate = self
     }
 
     private func configureStatusItem() {
@@ -119,6 +120,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PopoverPresenting {
             Task { @MainActor in
                 self?.togglePopover(nil)
             }
+        }
+    }
+
+    // MARK: - NSPopoverDelegate
+
+    @objc nonisolated func popoverDidClose(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            self?.viewModel?.returnToPrimaryPanel()
         }
     }
 }

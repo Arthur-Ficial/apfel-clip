@@ -18,6 +18,7 @@ final class PopoverViewModel {
     var result: ClipResultState?
     var banner: ClipBanner?
     var isRunning = false
+    var runningActionID: String?
     var serverState: ClipServerState = .starting
     var controlPort: Int?
 
@@ -169,8 +170,12 @@ final class PopoverViewModel {
         }
 
         isRunning = true
+        runningActionID = action.id
         banner = ClipBanner(style: .info, title: "Running \(action.name)", detail: "Applying the action to your clipboard text.")
-        defer { isRunning = false }
+        defer {
+            isRunning = false
+            runningActionID = nil
+        }
 
         do {
             let output = try await actionExecutor.run(action: action, input: clipboardText)
@@ -202,8 +207,12 @@ final class PopoverViewModel {
         }
 
         isRunning = true
+        runningActionID = "custom"
         banner = ClipBanner(style: .info, title: "Running custom prompt", detail: effectivePrompt)
-        defer { isRunning = false }
+        defer {
+            isRunning = false
+            runningActionID = nil
+        }
 
         do {
             let output = try await actionExecutor.runCustom(prompt: effectivePrompt, input: clipboardText)
@@ -340,11 +349,16 @@ final class PopoverViewModel {
 
     private func handleExternalClipboardChange() {
         refreshFromClipboard()
-        if screen == .actions || screen == .customPrompt {
+        if screen == .result {
+            // New external content arrived — stale result is no longer relevant; go home
             result = nil
-        }
-        if !clipboardText.isEmpty && screen == .customPrompt {
-            banner = ClipBanner(style: .info, title: "Clipboard updated", detail: "Custom prompt will apply to the latest clipboard text.")
+            screen = settings.preferredPanel.screen
+            banner = nil
+        } else if screen == .actions || screen == .customPrompt {
+            result = nil
+            if !clipboardText.isEmpty && screen == .customPrompt {
+                banner = ClipBanner(style: .info, title: "Clipboard updated", detail: "Custom prompt will apply to the latest clipboard text.")
+            }
         }
     }
 
