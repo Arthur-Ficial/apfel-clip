@@ -230,12 +230,7 @@ struct SavedCustomActionViewModelTests {
         await viewModel.saveCustomAction(name: "Test", icon: "pencil", prompt: "Do it", contentTypes: [.text])
         let id = viewModel.settings.savedCustomActions[0].id
         await viewModel.toggleFavorite(id)
-        await viewModel.toggleHidden(id) // this removes from favorites and adds to hidden
-        // Actually toggleHidden also removes from favorites; let's just toggle hidden directly
-        // Re-add to favorites first
-        settings: do {
-            // Just verify delete cleans IDs
-        }
+        await viewModel.toggleHidden(id)
 
         await viewModel.deleteSavedAction(id)
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-macOS menu bar app - AI-powered clipboard actions via [apfel](https://github.com/Arthur-Ficial/apfel). Pure HTTP consumer of `apfel --serve`. No model logic, no FoundationModels dependency.
+macOS menu bar app — AI-powered clipboard actions via [apfel](https://github.com/Arthur-Ficial/apfel). Pure HTTP consumer of `apfel --serve`. No model logic, no FoundationModels dependency.
 
 ## Build & Run
 
@@ -12,44 +12,46 @@ make install
 apfel-clip
 ```
 
-Requires `apfel` installed and in PATH. Uses port 11435.
+Requires `apfel` in PATH. Uses port 11435.
 
 ## Architecture
 
+MVVM, `@Observable` ViewModel, Swift actors for stores.
+
 ```
-main.swift -> AppDelegate
-  |- NSStatusItem (menu bar icon)
-  |- NSPopover -> PopoverView (SwiftUI)
-  |    |- ActionListView (content-aware action buttons)
-  |    |- ResultView (before/after + "Copied!" banner)
-  |    |- HistoryView (last 10 transformations)
-  |    '- Custom prompt input
-  |- ClipboardMonitor (polls NSPasteboard every 500ms)
-  |- ContentDetector (heuristic: code/error/command/JSON/text)
-  |- ActionRunner -> APIClient (POST /v1/chat/completions)
-  '- ServerManager (spawns apfel --serve --port 11435)
+App/ApfelClipApp.swift  →  App/AppDelegate.swift
+  ├─ Services/ServerManager        — spawns apfel --serve --port 11435
+  ├─ Services/PasteboardClipboardService  — polls NSPasteboard every 500ms
+  ├─ Services/ConfigurableClipActionExecutor  — routes to ApfelClipService or local
+  ├─ Services/ApfelClipService     — POST /v1/chat/completions
+  ├─ Services/FileHistoryStore     — ~/Library/Application Support/apfel-clip/history.json
+  ├─ Services/UserDefaultsSettingsStore  — UserDefaults "apfel-clip.settings"
+  ├─ Services/ClipControlServer    — local HTTP control API (automation)
+  ├─ ViewModels/PopoverViewModel   — all app state + business logic (@Observable)
+  └─ Views/PopoverRootView         — SwiftUI popover (540×820)
+       ├─ actionsPanel             — content-type-aware action buttons, drag-to-reorder
+       ├─ resultPanel              — original → action → editable result
+       ├─ historyPanel             — recent transformations
+       ├─ customPromptPanel        — free-text prompt + "Save as Action"
+       ├─ settingsPanel            — auto-copy, saved actions CRUD, action manager
+       └─ SavedActionForm.swift    — icon picker + create/edit form for saved actions
 ```
 
-## Key Files
+## Key Models
 
-| File | Purpose |
+| Type | Purpose |
 |------|---------|
-| `Sources/main.swift` | Entry point, NSApp setup |
-| `Sources/AppDelegate.swift` | Menu bar, popover, server lifecycle, hotkey |
-| `Sources/APIClient.swift` | HTTP client for apfel server |
-| `Sources/ClipboardMonitor.swift` | Clipboard change detection |
-| `Sources/ContentDetector.swift` | Content type heuristics |
-| `Sources/Actions.swift` | Action definitions with system prompts |
-| `Sources/ActionRunner.swift` | Executes actions against server |
-| `Sources/PopoverView.swift` | Main popover layout and state machine |
-| `Sources/ActionListView.swift` | Action buttons with hover effects |
-| `Sources/ResultView.swift` | Before/after display with auto-copy |
-| `Sources/HistoryView.swift` | Recent transformations |
-| `Sources/TokenEstimator.swift` | Token count estimation |
+| `ClipAction` | Built-in action (id, name, icon, systemPrompt, instruction, contentTypes) |
+| `SavedCustomAction` | User-saved prompt as a named action |
+| `ClipSettings` | Persisted preferences (autoCopy, favorites, hidden, saved actions, order) |
+| `ClipHistoryEntry` | One transformation record |
+| `ClipResultState` | In-memory result shown in result panel |
+| `ContentType` | text / code / json / error — drives action filtering |
 
 ## Notes
 
-- Port 11435 (different from apfel default 11434 and apfel-gui 11434)
-- No external Swift package dependencies
+- `ClipActionCatalog.strict` — shared "no commentary" suffix for all system prompts
+- Port 11435 (different from apfel default 11434)
 - LSUIElement=true in Info.plist (no dock icon)
-- System prompts use strict prefix to prevent AI from adding commentary
+- No external Swift package dependencies
+- Popover created after settings load — never shown with empty defaults

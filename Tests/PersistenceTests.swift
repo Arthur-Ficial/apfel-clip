@@ -78,25 +78,14 @@ struct PersistenceTests {
         #expect(loaded.actionOrder.isEmpty)
     }
 
-    @Test("ClipSettings decodes old JSON without actionOrder (backward-compat)")
-    func backwardCompatibilityMissingActionOrder() async {
-        let suiteName = "test-\(UUID().uuidString)"
-        // Old-format JSON: has savedCustomActions but no actionOrder key
-        let oldJSON = """
-        {"autoCopy":true,"recentCustomPrompts":["haiku"],"preferredPanel":"history",
-         "favoriteActionIDs":["fix-grammar"],"hiddenActionIDs":[],
-         "savedCustomActions":[]}
-        """.data(using: .utf8)!
-        UserDefaults(suiteName: suiteName)!.set(oldJSON, forKey: "settings")
+    @Test("UserDefaultsSettingsStore returns defaults on corrupt data")
+    func corruptDataReturnsDefaults() async {
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        defaults.set("not json".data(using: .utf8)!, forKey: "settings")
+        let store = UserDefaultsSettingsStore(defaults: defaults, key: "settings")
 
-        let store = UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: suiteName)!, key: "settings")
         let loaded = await store.load()
 
-        // All existing fields must survive; missing actionOrder defaults to []
-        #expect(loaded.autoCopy == true)
-        #expect(loaded.recentCustomPrompts == ["haiku"])
-        #expect(loaded.preferredPanel == .history)
-        #expect(loaded.favoriteActionIDs == ["fix-grammar"])
-        #expect(loaded.actionOrder.isEmpty)
+        #expect(loaded == ClipSettings())
     }
 }

@@ -77,14 +77,10 @@ final class ApfelClipService: ClipService, @unchecked Sendable {
                 throw ClipServiceError.invalidResponse
             }
             if httpResponse.statusCode >= 400 {
-                if let apiError = try? JSONDecoder().decode(APIError.self, from: data) {
-                    throw ClipServiceError.serverError(Self.userFacingError(apiError.error.message))
-                }
-                let raw = String(data: data, encoding: .utf8) ?? "Unknown error"
-                throw ClipServiceError.serverError(Self.userFacingError(raw))
-            }
-            if let apiError = try? JSONDecoder().decode(APIError.self, from: data) {
-                throw ClipServiceError.serverError(Self.userFacingError(apiError.error.message))
+                let message = (try? JSONDecoder().decode(APIError.self, from: data))?.error.message
+                    ?? String(data: data, encoding: .utf8)
+                    ?? "Unknown error"
+                throw ClipServiceError.serverError(Self.userFacingError(message))
             }
             let decoded = try JSONDecoder().decode(ChatResponse.self, from: data)
             let content = decoded.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

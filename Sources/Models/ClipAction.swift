@@ -33,7 +33,7 @@ struct ClipAction: Identifiable, Codable, Hashable, Sendable {
 }
 
 enum ClipActionCatalog {
-    private static let strict = "Output ONLY the result. No introduction, no explanation, no commentary, no before/after labels, no quotes around the output, no sign-off. Just the transformed text."
+    static let strict = "Output ONLY the result. No introduction, no explanation, no commentary, no before/after labels, no quotes around the output, no sign-off. Just the transformed text."
     private static let rewriterSystem = "You are a text rewriter. \(strict)"
     private static let translatorSystem = "You are a translator. \(strict)"
     private static let explainerSystem = "You are a concise expert explainer. \(strict)"
