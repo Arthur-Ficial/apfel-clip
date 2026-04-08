@@ -5,7 +5,7 @@ cask "apfel-clip" do
   url "https://github.com/Arthur-Ficial/apfel-clip/releases/download/v#{version}/apfel-clip-macos-arm64.zip"
   name "apfel-clip"
   desc "AI-powered clipboard actions from the macOS menu bar"
-  homepage "https://github.com/Arthur-Ficial/apfel-clip"
+  homepage "https://apfel-clip.franzai.com"
 
   auto_updates false
   depends_on arch: :arm64

@@ -64,48 +64,85 @@ apfel-clip detects what's in your clipboard and offers the right actions for it:
 
 ## Requirements
 
-- macOS 26 (Tahoe) or later
-- Apple Silicon (M1 or later)
-- Apple Intelligence enabled
-- [`apfel`](https://github.com/Arthur-Ficial/apfel) — embedded in packaged builds, or on `PATH` for source builds
+You need all three before installing:
+
+| Requirement | How to check |
+|---|---|
+| **macOS 26 (Tahoe) or later** | Apple menu → About This Mac |
+| **Apple Silicon (M1 or later)** | Apple menu → About This Mac — must say M1, M2, M3, or M4 |
+| **Apple Intelligence enabled** | System Settings → Apple Intelligence & Siri → turn on Apple Intelligence |
+
+> **`apfel` (AI engine):** Packaged builds (install script, Homebrew, zip) embed it inside the app bundle automatically — nothing extra to install. Building from source requires `apfel` on your `PATH`: `brew install Arthur-Ficial/tap/apfel`.
 
 ---
 
 ## Install
 
-### One-liner (recommended)
+### Option 1 — One-liner (recommended)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | bash
+Open Terminal and paste:
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | zsh
 ```
 
-Installs `apfel-clip.app` into `/Applications` and links `apfel-clip` into `~/.local/bin`.
+Installs `apfel-clip.app` to `/Applications` and links `apfel-clip` into `~/.local/bin`. Done in ~5 seconds.
 
-### Direct download
-
-Download the latest zip from [Releases](https://github.com/Arthur-Ficial/apfel-clip/releases/latest), unzip, and drag `apfel-clip.app` to `/Applications`.
+### Option 2 — Homebrew
 
 ```bash
-# Verify checksum (SHA256SUMS is in each release)
+# Add the tap once (you only need to do this once)
+brew tap Arthur-Ficial/tap
+
+# Install the cask (the --cask flag is required)
+brew install --cask apfel-clip
+
+# Update later
+brew upgrade --cask apfel-clip
+```
+
+> Don't have Homebrew? Install it at [brew.sh](https://brew.sh).
+
+### Option 3 — Direct download (zip)
+
+1. Download **[apfel-clip-macos-arm64.zip](https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip)** from the [latest release](https://github.com/Arthur-Ficial/apfel-clip/releases/latest)
+2. Unzip it
+3. Drag `apfel-clip.app` to `/Applications`
+
+```bash
+# Verify SHA-256 (optional — checksums in SHA256SUMS in each release)
 shasum -a 256 apfel-clip-macos-arm64.zip
 ```
 
-### Homebrew
-
-```bash
-brew tap Arthur-Ficial/tap
-brew install --cask apfel-clip
-```
-
-### Build from source
+### Option 4 — Build from source
 
 ```bash
 git clone https://github.com/Arthur-Ficial/apfel-clip.git
 cd apfel-clip
-make install
+make install   # builds the .app and copies it to /Applications
 ```
 
-> **First launch:** macOS may show a Gatekeeper warning for unsigned apps. Right-click the app → **Open** to bypass it once.
+Requires Xcode command-line tools and `apfel` on your `PATH`.
+
+---
+
+## First launch — Gatekeeper
+
+macOS will block the app on first open with a security warning because it isn't notarised.
+
+**To open it:** Right-click (or Control-click) `apfel-clip.app` → **Open** → **Open**
+
+You only need to do this once. The warning won't appear again.
+
+---
+
+## Quick start
+
+1. Open **apfel-clip** from `/Applications`
+2. The clipboard icon appears in your **menu bar**
+3. Copy any text, code, or error message
+4. Press **⌘⇧V** — the action panel opens
+5. Pick an action — the result appears in seconds
 
 ---
 
