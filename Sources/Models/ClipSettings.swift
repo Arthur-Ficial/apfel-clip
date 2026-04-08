@@ -19,10 +19,35 @@ enum ClipPrimaryPanel: String, Codable, CaseIterable, Sendable {
     }
 }
 
+struct SavedCustomAction: Identifiable, Codable, Equatable, Hashable, Sendable {
+    var id: String
+    var name: String
+    var icon: String
+    var prompt: String
+    var contentTypes: Set<ContentType>
+    var createdAt: Date
+}
+
+extension SavedCustomAction {
+    func asClipAction() -> ClipAction {
+        let strict = "Output ONLY the result. No introduction, no explanation, no commentary, no before/after labels, no quotes, no sign-off."
+        return ClipAction(
+            id,
+            name: name,
+            icon: icon,
+            systemPrompt: "Apply the user's instruction to the input. \(strict)",
+            instruction: prompt,
+            contentTypes: contentTypes,
+            localAction: nil
+        )
+    }
+}
+
 struct ClipSettings: Codable, Equatable, Sendable {
     var autoCopy: Bool = false
     var recentCustomPrompts: [String] = []
     var preferredPanel: ClipPrimaryPanel = .actions
     var favoriteActionIDs: [String] = []
     var hiddenActionIDs: [String] = []
+    var savedCustomActions: [SavedCustomAction] = []
 }

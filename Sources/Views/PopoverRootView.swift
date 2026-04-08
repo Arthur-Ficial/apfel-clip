@@ -187,7 +187,10 @@ struct PopoverRootView: View {
         let isHovered = hoveredActionID == action.id && !viewModel.isRunning
         let green = Color(red: 0.16, green: 0.49, blue: 0.22)
         let bgColor: Color = isThisRunning ? green.opacity(0.07) : isHovered ? .white : Color.white.opacity(0.8)
-        let subtitleText = isThisRunning ? "Working…" : action.localAction == nil ? "AI action" : "Local action"
+        let isSaved = viewModel.settings.savedCustomActions.contains { $0.id == action.id }
+        let subtitleText = isThisRunning ? "Working…"
+            : isSaved ? "Custom"
+            : action.localAction == nil ? "AI action" : "Local action"
 
         return Button {
             Task { _ = try? await viewModel.runAction(action) }
@@ -356,6 +359,11 @@ struct PopoverRootView: View {
                 }
             }
 
+            // ── Saved Actions ────────────────────────────────────────────────
+            SurfaceCard {
+                savedActionsSection
+            }
+
             SurfaceCard(fillAvailableHeight: true) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Recent custom prompts")
@@ -440,6 +448,106 @@ struct PopoverRootView: View {
         }
     }
 
+    private var savedActionsSection: some View {
+        let green = Color(red: 0.16, green: 0.49, blue: 0.22)
+        let saved = viewModel.settings.savedCustomActions
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Saved Actions")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                if !saved.isEmpty {
+                    Text("\(saved.count)")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(green.opacity(0.12)))
+                        .foregroundStyle(green)
+                }
+                Spacer()
+            }
+
+            if saved.isEmpty {
+                Text("No saved actions yet. Type a custom prompt and tap \"Save as Action\".")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(saved) { action in
+                        savedActionRow(action)
+                    }
+                }
+            }
+        }
+    }
+
+    private func savedActionRow(_ saved: SavedCustomAction) -> some View {
+        let green = Color(red: 0.16, green: 0.49, blue: 0.22)
+        let isExpanded = viewModel.editingSavedActionID == saved.id
+        return VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                Image(systemName: saved.icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 18)
+                    .foregroundStyle(green)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(saved.name)
+                        .font(.subheadline.weight(.medium))
+                    Text(saved.contentTypes.map(\.rawValue).sorted().joined(separator: " • "))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        viewModel.editingSavedActionID = isExpanded ? nil : saved.id
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "xmark" : "pencil")
+                        .foregroundStyle(isExpanded ? Color.primary : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.runningActionID == saved.id)
+
+                Button {
+                    Task { await viewModel.deleteSavedAction(saved.id) }
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(Color.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.white.opacity(0.78))
+            )
+
+            if isExpanded {
+                SavedActionFormView(
+                    mode: .edit(action: saved),
+                    onSave: { name, icon, types in
+                        Task {
+                            await viewModel.updateSavedAction(saved.id, name: name, icon: icon, contentTypes: types)
+                            withAnimation { viewModel.editingSavedActionID = nil }
+                        }
+                    },
+                    onCancel: {
+                        withAnimation { viewModel.editingSavedActionID = nil }
+                    }
+                )
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+            }
+        }
+    }
+
     private var customPromptPanel: some View {
         VStack(spacing: 14) {
             previewCard
@@ -457,7 +565,50 @@ struct PopoverRootView: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(Color.white.opacity(0.9))
                         )
-                        .frame(height: 150)
+                        .frame(height: 130)
+
+                    // Save as Action
+                    let promptIsEmpty = viewModel.customPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    HStack {
+                        Spacer()
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                viewModel.isSaveFormVisible.toggle()
+                            }
+                        } label: {
+                            Label(
+                                viewModel.isSaveFormVisible ? "Cancel" : "Save as Action",
+                                systemImage: viewModel.isSaveFormVisible ? "xmark" : "bookmark.badge.plus"
+                            )
+                            .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color(red: 0.15, green: 0.45, blue: 0.20))
+                        .disabled(promptIsEmpty)
+                    }
+
+                    if viewModel.isSaveFormVisible {
+                        SavedActionFormView(
+                            mode: .create(prompt: viewModel.customPrompt),
+                            onSave: { name, icon, types in
+                                Task {
+                                    await viewModel.saveCustomAction(
+                                        name: name, icon: icon,
+                                        prompt: viewModel.customPrompt, contentTypes: types
+                                    )
+                                    withAnimation { viewModel.isSaveFormVisible = false }
+                                    viewModel.showBanner(.init(style: .success, title: "Action saved", detail: name))
+                                }
+                            },
+                            onCancel: {
+                                withAnimation { viewModel.isSaveFormVisible = false }
+                            }
+                        )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
+                    }
 
                     if !viewModel.settings.recentCustomPrompts.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -603,11 +754,7 @@ struct PopoverRootView: View {
                             Spacer()
 
                             Button {
-                                Task {
-                                    if let action = ClipActionCatalog.action(id: result.actionID) {
-                                        _ = try? await viewModel.runAction(action)
-                                    }
-                                }
+                                Task { _ = try? await viewModel.runAction(id: result.actionID) }
                             } label: {
                                 Label("Run Again", systemImage: "arrow.clockwise")
                             }

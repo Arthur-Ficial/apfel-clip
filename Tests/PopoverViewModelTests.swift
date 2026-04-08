@@ -42,7 +42,7 @@ struct PopoverViewModelTests {
         #expect(viewModel.screen == .history)
     }
 
-    @Test("Running an action stores a result and auto-copies it")
+    @Test("Running an action stores a result without auto-copying by default")
     func runActionSuccess() async throws {
         let (viewModel, executor, clipboard, historyStore, _) = makeViewModel()
         await executor.setNextResult("Fixed text")
@@ -54,9 +54,23 @@ struct PopoverViewModelTests {
         #expect(result.output == "Fixed text")
         #expect(viewModel.screen == .result)
         #expect(viewModel.history.count == 1)
-        #expect(clipboard.setTextCalls.last == "Fixed text")
+        #expect(clipboard.setTextCalls.isEmpty) // autoCopy defaults to false
         let saved = try await historyStore.load()
         #expect(saved.count == 1)
+    }
+
+    @Test("Running an action auto-copies when autoCopy is enabled")
+    func runActionAutoCopiesToClipboard() async throws {
+        let (viewModel, executor, clipboard, _, settingsStore) = makeViewModel()
+        await settingsStore.save(ClipSettings(autoCopy: true))
+        await viewModel.loadPersistedState()
+        await executor.setNextResult("Fixed text")
+        clipboard.currentText = "teh text"
+        viewModel.refreshFromClipboard()
+
+        _ = try await viewModel.runAction(id: "fix-grammar")
+
+        #expect(clipboard.setTextCalls.last == "Fixed text")
     }
 
     @Test("Failed action leaves error banner")
@@ -107,7 +121,7 @@ struct PopoverViewModelTests {
         #expect(loaded.hiddenActionIDs.contains("translate-ja"))
     }
 
-    @Test("Opening history entry restores result and copies output")
+    @Test("Opening history entry shows result without copying to clipboard")
     func openHistoryEntry() {
         let (viewModel, _, clipboard, _, _) = makeViewModel()
         let entry = ClipHistoryEntry(
@@ -121,6 +135,7 @@ struct PopoverViewModelTests {
 
         #expect(viewModel.result?.output == "Short")
         #expect(viewModel.screen == .result)
-        #expect(clipboard.setTextCalls.last == "Short")
+        #expect(viewModel.result?.copiedToClipboard == false)
+        #expect(clipboard.setTextCalls.isEmpty) // must NOT auto-copy on history open
     }
 }

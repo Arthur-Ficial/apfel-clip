@@ -19,6 +19,8 @@ final class PopoverViewModel {
     var banner: ClipBanner?
     var isRunning = false
     var runningActionID: String?
+    var isSaveFormVisible: Bool = false
+    var editingSavedActionID: String? = nil
     var serverState: ClipServerState = .starting
     var controlPort: Int?
 
@@ -38,17 +40,22 @@ final class PopoverViewModel {
         let hidden = Set(settings.hiddenActionIDs)
         let favorites = Set(settings.favoriteActionIDs)
         let orderedFavorites = settings.favoriteActionIDs
-        let base = ClipActionCatalog.actions(for: contentType).filter { !hidden.contains($0.id) }
+        let builtIn = ClipActionCatalog.actions(for: contentType).filter { !hidden.contains($0.id) }
+        let saved = settings.savedCustomActions
+            .filter { $0.contentTypes.contains(contentType) && !hidden.contains($0.id) }
+            .map { $0.asClipAction() }
+        let combined = builtIn + saved
 
-        return base.sorted { lhs, rhs in
+        return combined.sorted { lhs, rhs in
             let lhsFavorite = favorites.contains(lhs.id)
             let rhsFavorite = favorites.contains(rhs.id)
-            if lhsFavorite != rhsFavorite {
-                return lhsFavorite && !rhsFavorite
-            }
+            if lhsFavorite != rhsFavorite { return lhsFavorite && !rhsFavorite }
             if lhsFavorite, rhsFavorite {
                 return favoriteRank(of: lhs.id, in: orderedFavorites) < favoriteRank(of: rhs.id, in: orderedFavorites)
             }
+            let lhsIsBuiltIn = ClipActionCatalog.action(id: lhs.id) != nil
+            let rhsIsBuiltIn = ClipActionCatalog.action(id: rhs.id) != nil
+            if lhsIsBuiltIn != rhsIsBuiltIn { return lhsIsBuiltIn }
             return catalogRank(of: lhs.id) < catalogRank(of: rhs.id)
         }
     }
@@ -151,6 +158,8 @@ final class PopoverViewModel {
     }
 
     func returnToPrimaryPanel() {
+        isSaveFormVisible = false
+        editingSavedActionID = nil
         screen = settings.preferredPanel.screen
     }
 
@@ -160,10 +169,13 @@ final class PopoverViewModel {
     }
 
     func runAction(id: String) async throws -> ClipResultState {
-        guard let action = ClipActionCatalog.action(id: id) else {
-            throw ClipAppError.actionNotFound(id)
+        if let action = ClipActionCatalog.action(id: id) {
+            return try await runAction(action)
         }
-        return try await runAction(action)
+        if let saved = settings.savedCustomActions.first(where: { $0.id == id }) {
+            return try await runAction(saved.asClipAction())
+        }
+        throw ClipAppError.actionNotFound(id)
     }
 
     func runAction(_ action: ClipAction) async throws -> ClipResultState {
@@ -300,6 +312,39 @@ final class PopoverViewModel {
         await settingsStore.save(settings)
     }
 
+    func saveCustomAction(name: String, icon: String, prompt: String, contentTypes: Set<ContentType>) async {
+        let trimName = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+        let trimPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimName.isEmpty, !trimPrompt.isEmpty, !contentTypes.isEmpty else { return }
+        let action = SavedCustomAction(
+            id: "saved-\(UUID().uuidString)",
+            name: trimName,
+            icon: icon,
+            prompt: trimPrompt,
+            contentTypes: contentTypes,
+            createdAt: Date()
+        )
+        settings.savedCustomActions.insert(action, at: 0)
+        await persistSettings()
+    }
+
+    func updateSavedAction(_ id: String, name: String, icon: String, contentTypes: Set<ContentType>) async {
+        guard let i = settings.savedCustomActions.firstIndex(where: { $0.id == id }) else { return }
+        let trimName = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+        guard !trimName.isEmpty, !contentTypes.isEmpty else { return }
+        settings.savedCustomActions[i].name = trimName
+        settings.savedCustomActions[i].icon = icon
+        settings.savedCustomActions[i].contentTypes = contentTypes
+        await persistSettings()
+    }
+
+    func deleteSavedAction(_ id: String) async {
+        settings.savedCustomActions.removeAll { $0.id == id }
+        settings.favoriteActionIDs.removeAll { $0 == id }
+        settings.hiddenActionIDs.removeAll { $0 == id }
+        await persistSettings()
+    }
+
     func updateAutoCopy(_ enabled: Bool) async {
         settings.autoCopy = enabled
         await persistSettings()
@@ -424,7 +469,9 @@ final class PopoverViewModel {
     }
 
     private func sanitizeActionIDs(_ actionIDs: [String]) -> [String] {
-        let valid = Set(ClipActionCatalog.all.map(\.id))
+        let catalogValid = Set(ClipActionCatalog.all.map(\.id))
+        let savedValid = Set(settings.savedCustomActions.map(\.id))
+        let valid = catalogValid.union(savedValid)
         var deduped: [String] = []
         for actionID in actionIDs where valid.contains(actionID) && !deduped.contains(actionID) {
             deduped.append(actionID)

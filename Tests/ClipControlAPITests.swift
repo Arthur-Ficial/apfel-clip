@@ -62,12 +62,12 @@ struct ClipControlAPITests {
         let response = await api.handle(
             method: "POST",
             path: "/settings",
-            body: #"{"auto_copy":false,"preferred_panel":"settings","favorite_action_ids":["fix-grammar"],"hidden_action_ids":["translate-ja"]}"#
+            body: #"{"auto_copy":false,"preferred_panel":"history","favorite_action_ids":["fix-grammar"],"hidden_action_ids":["translate-ja"]}"#
         )
         let json = try parse(response)
 
         #expect(viewModel.settings.autoCopy == false)
-        #expect(viewModel.settings.preferredPanel == .settings)
+        #expect(viewModel.settings.preferredPanel == .history)
         #expect(viewModel.settings.favoriteActionIDs == ["fix-grammar"])
         #expect(viewModel.settings.hiddenActionIDs == ["translate-ja"])
         #expect(json["favorite_action_ids"] as? [String] == ["fix-grammar"])
