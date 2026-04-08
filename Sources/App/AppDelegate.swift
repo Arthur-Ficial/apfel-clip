@@ -25,7 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         )
         self.viewModel = viewModel
 
-        configurePopover(viewModel: viewModel)
+        // Status item and hotkey register immediately so the icon appears at once.
+        // Popover is created only after settings are loaded — so the first time the
+        // user opens it, their saved actions and preferences are already present.
         configureStatusItem()
         configureHotkey()
 
@@ -62,7 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
     }
 
     private func bootstrap(viewModel: PopoverViewModel) async {
+        // Load settings and history FIRST — popover is created after this so the
+        // UI is never shown in an empty-defaults state.
         await viewModel.loadPersistedState()
+        configurePopover(viewModel: viewModel)
+
         viewModel.attachClipboardListener()
         clipboardService.start()
         viewModel.refreshFromClipboard()
