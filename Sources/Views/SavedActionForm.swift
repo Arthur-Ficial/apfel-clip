@@ -205,8 +205,7 @@ struct SavedActionFormView: View {
             // Buttons
             HStack {
                 Button(isEditMode ? "Cancel edit" : "Cancel") { onCancel() }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(.bordered)
                 Spacer()
                 Button(isEditMode ? "Save changes" : "Save Action") {
                     onSave(name, selectedIcon, selectedTypes)

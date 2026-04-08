@@ -64,10 +64,9 @@ struct PopoverRootView: View {
                         viewModel.returnToPrimaryPanel()
                     } label: {
                         Label("Back", systemImage: "arrow.left")
-                            .font(.caption.weight(.semibold))
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 } else {
                     HStack(spacing: 10) {
                         Label("⌘⇧V", systemImage: "keyboard")
@@ -154,10 +153,10 @@ struct PopoverRootView: View {
                             viewModel.openCustomPrompt()
                         } label: {
                             Label("Custom", systemImage: "wand.and.stars")
-                                .font(.caption.weight(.semibold))
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color(red: 0.15, green: 0.45, blue: 0.20))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(Color(red: 0.15, green: 0.45, blue: 0.20))
                         .disabled(viewModel.clipboardText.isEmpty)
                     }
 
@@ -253,12 +252,10 @@ struct PopoverRootView: View {
                     }
                     Spacer()
                     Button("Clear") {
-                        Task {
-                            await viewModel.clearHistory()
-                        }
+                        Task { await viewModel.clearHistory() }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                     .disabled(viewModel.history.isEmpty)
                 }
             }
@@ -413,25 +410,23 @@ struct PopoverRootView: View {
                                     Spacer()
 
                                     Button {
-                                        Task {
-                                            await viewModel.toggleFavorite(action.id)
-                                        }
+                                        Task { await viewModel.toggleFavorite(action.id) }
                                     } label: {
                                         Image(systemName: viewModel.isFavorite(action.id) ? "star.fill" : "star")
-                                            .foregroundStyle(viewModel.isFavorite(action.id) ? Color.orange : .secondary)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .tint(viewModel.isFavorite(action.id) ? .orange : nil)
                                     .help("Favorite action")
 
                                     Button {
-                                        Task {
-                                            await viewModel.toggleHidden(action.id)
-                                        }
+                                        Task { await viewModel.toggleHidden(action.id) }
                                     } label: {
                                         Image(systemName: viewModel.isHidden(action.id) ? "eye.slash.fill" : "eye")
-                                            .foregroundStyle(viewModel.isHidden(action.id) ? Color.red : .secondary)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .tint(viewModel.isHidden(action.id) ? .red : nil)
                                     .help("Hide action")
                                 }
                                 .padding(.horizontal, 10)
@@ -535,23 +530,20 @@ struct PopoverRootView: View {
                     }
                 } label: {
                     Image(systemName: isExpanded ? "xmark" : "pencil")
-                        .font(.system(size: 12))
-                        .frame(width: 22, height: 22)
-                        .foregroundStyle(isExpanded ? Color.primary : Color.secondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .disabled(viewModel.runningActionID == saved.id)
 
                 // Delete
-                Button {
+                Button(role: .destructive) {
                     Task { await viewModel.deleteSavedAction(saved.id) }
                 } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 12))
-                        .frame(width: 22, height: 22)
-                        .foregroundStyle(Color.red.opacity(0.7))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.red)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -630,10 +622,10 @@ struct PopoverRootView: View {
                                 viewModel.isSaveFormVisible ? "Cancel" : "Save as Action",
                                 systemImage: viewModel.isSaveFormVisible ? "xmark" : "bookmark.badge.plus"
                             )
-                            .font(.caption.weight(.semibold))
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color(red: 0.15, green: 0.45, blue: 0.20))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(Color(red: 0.15, green: 0.45, blue: 0.20))
                         .disabled(promptIsEmpty)
                     }
 
@@ -694,15 +686,13 @@ struct PopoverRootView: View {
                         Button("Cancel") {
                             viewModel.returnToPrimaryPanel()
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
 
                         Spacer()
 
                         Button {
-                            Task {
-                                _ = try? await viewModel.runCustomPrompt()
-                            }
+                            Task { _ = try? await viewModel.runCustomPrompt() }
                         } label: {
                             Label("Run Prompt", systemImage: "sparkles")
                         }
@@ -814,8 +804,8 @@ struct PopoverRootView: View {
                             } label: {
                                 Label("Back", systemImage: "arrow.left")
                             }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.secondary)
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
 
                             Spacer()
 
