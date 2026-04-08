@@ -580,8 +580,10 @@ struct PopoverRootView: View {
                         Spacer(minLength: 0)
 
                         HStack {
-                            Button("Back") {
+                            Button {
                                 viewModel.returnToPrimaryPanel()
+                            } label: {
+                                Label("Back", systemImage: "arrow.left")
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(.secondary)
