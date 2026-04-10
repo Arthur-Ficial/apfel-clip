@@ -1,16 +1,31 @@
 # apfel-clip
 
-**AI clipboard actions for macOS — on-device, instant, private.**
+**AI clipboard actions for macOS. Local-first. Fast. Menu-bar native.**
 
-Copy text, code, JSON, logs, or an error. Hit **⌘⇧V**. Pick an action. Paste the result. Everything runs locally via [apfel](https://github.com/Arthur-Ficial/apfel) — no API keys, no cloud, no data leaving your machine.
+Copy text, code, JSON, logs, or an error. Press `⌘⇧V`. Pick an action. Get back the next useful version of what you copied.
 
-**[apfel-clip.franzai.com](https://apfel-clip.franzai.com)**
+`apfel-clip` lives in your menu bar and uses [`apfel`](https://github.com/Arthur-Ficial/apfel) to run Apple's on-device model locally on your Mac. No API keys. No browser tab. No cloud round-trip.
+
+**Website:** [apfel-clip.franzai.com](https://apfel-clip.franzai.com)  
+**Releases:** [Latest release](https://github.com/Arthur-Ficial/apfel-clip/releases/latest)  
+**Issues:** [Report a bug or request a feature](https://github.com/Arthur-Ficial/apfel-clip/issues)
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B%20Tahoe-blue.svg)](https://www.apple.com/macos/)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2B-black.svg)](https://www.apple.com/mac/)
 
----
+## Why apfel-clip
+
+Most clipboard tools stop at copy and paste. Most AI tools pull you out of flow.
+
+apfel-clip does the opposite:
+
+- It stays in the menu bar.
+- It opens instantly with `⌘⇧V`.
+- It detects what is in the clipboard and shows the right actions.
+- It keeps the result close to the original so you can review, edit, copy, and move on.
+
+The goal is simple: make the clipboard feel like an action surface, not just temporary storage.
 
 ## Screenshots
 
@@ -28,192 +43,263 @@ Copy text, code, JSON, logs, or an error. Hit **⌘⇧V**. Pick an action. Paste
 <tr>
 <td align="center" width="50%">
 <img src="docs/screen-result.png" width="320" alt="Result panel"><br>
-<strong>Result view</strong> — original → action → editable result
+<strong>Workflow result view</strong> — original, action, result
 </td>
 <td align="center" width="50%">
 <img src="docs/screen-history.png" width="320" alt="History panel"><br>
-<strong>History</strong> — every successful transformation saved locally
+<strong>History</strong> — reopen or re-copy successful transformations
 </td>
 </tr>
 </table>
 
----
+## Highlights
 
-## What it does
+- **Fully local**: no API keys, no cloud calls, no external prompt window.
+- **Content-aware actions**: prose, code, shell commands, errors, and JSON get different action sets.
+- **Global hotkey**: `⌘⇧V` opens the popover from anywhere.
+- **Action manager**: favorite, hide, and drag-reorder actions.
+- **Saved custom actions**: turn any prompt into a reusable action with its own name and icon.
+- **Persistent history**: every successful transformation is stored locally.
+- **Auto-copy**: optionally copy results back to the clipboard as soon as they finish.
+- **Launch at login**: the app asks on first launch and lets you change it later in Settings.
+- **Automation API**: a small local HTTP API for scripts and tooling.
 
-apfel-clip detects what's in your clipboard and offers the right actions for it:
+## What it can do
 
-| Content type | Actions |
+apfel-clip detects what is in the clipboard and offers the matching tools:
+
+| Content type | Built-in actions |
 |---|---|
-| **Text / prose** | Fix grammar, make formal, make casual, translate, summarise, bullet points, make concise |
-| **Code** | Explain code, find bugs, add comments, simplify |
+| **Text / prose** | Fix grammar, make concise, make formal, make casual, summarize, bullet points, translate to German/French/Spanish/Japanese |
+| **Code** | Explain code, find bugs, add comments, simplify, summarize |
 | **Error messages** | Explain error, suggest fix |
 | **Shell commands** | Explain command, make safer |
 | **JSON** | Explain structure, pretty format |
-| **Any** | Custom prompt — your own instruction, or save it as a named action |
-
-## Features
-
-- **Fully on-device** — Apple Intelligence via apfel, no network calls
-- **Smart content detection** — right actions appear automatically
-- **Global hotkey ⌘⇧V** — works from any app
-- **Save custom actions** — turn any prompt into a reusable named action with an icon
-- **Favourites & reorder** — star, hide, drag to sort your action list
-- **Persistent history** — re-copy or revisit past results
-- **Auto-copy** — result lands in clipboard the instant the model finishes
-
----
+| **Anything** | Run a custom prompt and optionally save it as a reusable action |
 
 ## Requirements
 
-You need all three before installing:
+apfel-clip currently targets the local Apple Intelligence stack, so you need:
 
-| Requirement | How to check |
+| Requirement | Notes |
 |---|---|
-| **macOS 26 (Tahoe) or later** | Apple menu → About This Mac |
-| **Apple Silicon (M1 or later)** | Apple menu → About This Mac — must say M1, M2, M3, or M4 |
-| **Apple Intelligence enabled** | System Settings → Apple Intelligence & Siri → turn on Apple Intelligence |
+| **macOS 26 (Tahoe) or later** | The package target is `macOS(.v26)` |
+| **Apple Silicon** | M1 or newer |
+| **Apple Intelligence enabled** | Enable it in System Settings |
 
-> **`apfel` (AI engine):** Packaged builds (install script, Homebrew, zip) embed it inside the app bundle automatically — nothing extra to install. Building from source requires `apfel` on your `PATH`: `brew install Arthur-Ficial/tap/apfel`.
+Packaged installs embed `apfel` inside the app bundle automatically.
 
----
+If you build from source, install `apfel` first:
+
+```bash
+brew install Arthur-Ficial/tap/apfel
+```
 
 ## Install
 
-### Option 1 — Homebrew (recommended)
+### 1. Homebrew tap
+
+This is the best default path for most users.
 
 ```bash
-brew install Arthur-Ficial/tap/apfel-clip
+brew tap Arthur-Ficial/tap
+brew install --cask apfel-clip
 
 # Update later
-brew upgrade apfel-clip
+brew upgrade --cask apfel-clip
 ```
 
-> Don't have Homebrew? Install it at [brew.sh](https://brew.sh).
+If you do not have Homebrew yet, install it from [brew.sh](https://brew.sh).
 
-### Option 2 — Direct download (zip)
+### 2. Direct download
 
-1. Download **[apfel-clip-macos-arm64.zip](https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip)** from the [latest release](https://github.com/Arthur-Ficial/apfel-clip/releases/latest)
+1. Download [`apfel-clip-macos-arm64.zip`](https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip)
 2. Unzip it
-3. Drag `apfel-clip.app` to `/Applications`
+3. Move `apfel-clip.app` into `/Applications`
+
+Optional checksum verification:
 
 ```bash
-# Verify SHA-256 (optional — checksums in SHA256SUMS in each release)
 shasum -a 256 apfel-clip-macos-arm64.zip
 ```
 
-### Option 3 — One-liner installer
+Checksums are published alongside each release in `SHA256SUMS`.
 
-Open Terminal and paste:
+### 3. One-line installer
 
 ```zsh
 curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | zsh
 ```
 
-Installs `apfel-clip.app` to `/Applications` and links `apfel-clip` into `~/.local/bin`.
+This downloads the latest release, installs `apfel-clip.app` into `/Applications`, and links the CLI entrypoint into `~/.local/bin`.
 
-### Option 4 — Build from source
+### 4. Build from source
 
 ```bash
 git clone https://github.com/Arthur-Ficial/apfel-clip.git
 cd apfel-clip
-make install   # builds the .app and copies it to /Applications
+make install
 ```
 
-Requires Xcode command-line tools and `apfel` on your `PATH`.
-
----
-
-## First launch — Gatekeeper
-
-Distributed builds (Homebrew, zip download, installer) are signed and notarised — macOS will open them without any security warning.
-
-If you build from source, macOS will show a Gatekeeper warning on first open because the local build is not notarised.
-
-**To open a source build:** Right-click (or Control-click) `apfel-clip.app` → **Open** → **Open**
-
-You only need to do this once. The warning will not appear again.
-
----
-
-## Quick start
-
-1. Open **apfel-clip** from `/Applications`
-2. The clipboard icon appears in your **menu bar**
-3. Copy any text, code, or error message
-4. Press **⌘⇧V** — the action panel opens
-5. Pick an action — the result appears in seconds
-
----
-
-## Usage
-
-1. Copy any text, code, or error to your clipboard
-2. Press **⌘⇧V** (or click the clipboard icon in the menu bar)
-3. Pick an action from the list
-4. The result appears in the Result tab — edit if needed, then copy
-
-### Custom prompts
-
-Hit **Custom** in the action list to write any free-form instruction. After running it, tap **Save as Action** to add it to your personal action list with a name and icon.
-
-### Control API
-
-apfel-clip exposes a local HTTP API for automation:
+If you also want the CLI symlink:
 
 ```bash
-# Run an action programmatically
-curl -X POST http://localhost:11436/run \
-  -H "Content-Type: application/json" \
-  -d '{"action_id": "fix-grammar"}'
-
-# Check status
-curl http://localhost:11436/health
+make install-cli
 ```
 
----
+## First launch
+
+1. Open `apfel-clip.app` from `/Applications`
+2. The clipboard icon appears in the menu bar
+3. On first launch, the app asks whether it should start at login
+4. Copy something and press `⌘⇧V`
+5. Pick an action and review the result
+
+The launch-at-login choice can be changed later in Settings.
+
+### Gatekeeper
+
+Official release archives are intended for normal macOS installation.  
+Local source builds are ad hoc builds and may trigger Gatekeeper on first open.
+
+If you open a source build and macOS blocks it:
+
+1. Right-click `apfel-clip.app`
+2. Choose **Open**
+3. Confirm **Open** again
+
+You only need to do that once for a local build.
+
+## Daily workflow
+
+The intended loop is short:
+
+1. Copy text, code, JSON, or an error
+2. Press `⌘⇧V`
+3. Choose a suggested action or run a custom one
+4. Review the result
+5. Copy, edit, or reopen it later from History
+
+The result view is intentionally explicit: original at the top, the action in the middle, result below. It is meant to read like a workflow, not a dump of text.
+
+## Custom actions and action management
+
+apfel-clip is not limited to the built-in catalog.
+
+- Use **Custom** to run any prompt against the current clipboard content.
+- Save successful prompts as named reusable actions.
+- Scope saved actions to specific content types.
+- Favorite the actions you use most.
+- Hide actions you never want to see.
+- Drag to reorder the list so your action panel matches how you work.
+
+All of that state is stored locally.
+
+## Automation API
+
+apfel-clip exposes a local HTTP control API for scripting and automation.
+
+- It binds to the first free local port in `11436...11439`
+- It shares the same action execution path as the UI
+- It can read clipboard state, run actions, inspect history, update settings, and show or hide the UI
+
+Example:
+
+```bash
+curl http://127.0.0.1:11436/health
+
+curl -X POST http://127.0.0.1:11436/run \
+  -H "Content-Type: application/json" \
+  -d '{"action_id":"fix-grammar"}'
+```
+
+Main routes:
+
+- `GET /health`
+- `GET /state`
+- `GET /clipboard`
+- `POST /clipboard`
+- `GET /actions`
+- `POST /run`
+- `GET /history`
+- `POST /history/clear`
+- `GET /settings`
+- `POST /settings`
+- `POST /ui/show`
+- `POST /ui/hide`
 
 ## Architecture
 
-```
-App/ApfelClipApp.swift  →  App/AppDelegate.swift
-  ├─ Services/ServerManager            — spawns apfel --serve --port 11435
-  ├─ Services/PasteboardClipboardService — polls NSPasteboard every 500ms
-  ├─ Services/ConfigurableClipActionExecutor — routes to ApfelClipService or local
-  ├─ Services/ApfelClipService         — POST /v1/chat/completions
-  ├─ Services/FileHistoryStore         — ~/Library/Application Support/apfel-clip/history.json
-  ├─ Services/UserDefaultsSettingsStore — UserDefaults "apfel-clip.settings"
-  ├─ Services/ClipControlServer        — local HTTP control API
-  ├─ ViewModels/PopoverViewModel       — all app state + business logic
-  └─ Views/PopoverRootView             — SwiftUI popover (540×820)
+The codebase is organized like a small macOS product, not a single-file toy app:
+
+```text
+Sources/
+├─ App/
+│  ├─ ApfelClipApp.swift
+│  └─ AppDelegate.swift
+├─ Models/
+├─ Protocols/
+├─ Services/
+├─ ViewModels/
+└─ Views/
 ```
 
-MVVM, `@Observable` ViewModel, Swift actors for stores. No external Swift package dependencies.
+Core responsibilities:
 
----
+- `AppDelegate`: status item, global hotkey, popover lifecycle, first-run launch-at-login prompt.
+- `PopoverViewModel`: app state, action execution, history, settings, and action management.
+- `ServerManager`: reuses or starts `apfel` on the first free local port, using `--serve --cors --permissive`.
+- `ClipControlServer`: local automation API.
+- `FileHistoryStore`: JSON history persistence in Application Support.
+- `UserDefaultsSettingsStore`: persistent settings including favorites, hidden actions, saved actions, and preferred panel.
+- `PopoverRootView`: fixed-size SwiftUI popover UI.
 
 ## Development
 
 ```bash
-swift build          # debug build
-swift test           # run 53 tests
-make app             # build app bundle → build/apfel-clip.app
-make install         # build + copy to /Applications
-make dist            # build release zip + CLI tarball + checksums
-./scripts/test-install-methods.sh
+swift build
+swift test
+make app
+make run
+make install
+make install-cli
+./scripts/build-dist.sh
 ```
 
-Tests cover persistence, ViewModel CRUD, content detection, action execution, and the control API.
+The test suite covers:
 
----
+- content detection
+- action catalog behavior
+- persistence
+- saved custom action flows
+- view-model state transitions
+- control API behavior
+- server startup helpers
 
-## Related
+## Packaging and distribution
 
-- [apfel](https://github.com/Arthur-Ficial/apfel) — CLI + OpenAI-compatible server for Apple's on-device LLM
-- [apfel-gui](https://github.com/Arthur-Ficial/apfel-gui) — Native macOS debug GUI for apfel
+Release packaging lives in the repo:
 
----
+- `scripts/build-app.sh`: builds the `.app` bundle and embeds `apfel`
+- `scripts/build-dist.sh`: creates zip, CLI tarball, Homebrew cask, and checksums
+- `scripts/install.sh`: direct installer used by the one-line install path
+- `scripts/test-install-methods.sh`: verifies the install paths
+
+If you want a signed + notarized release build, the packaging flow supports it through:
+
+```bash
+SIGN_IDENTITY="Developer ID Application: …" \
+KEYCHAIN_PROFILE="…" \
+./scripts/build-dist.sh
+```
+
+Local developer builds do not need that, but they are not the same as a notarized release artifact.
+
+## Related projects
+
+- [apfel](https://github.com/Arthur-Ficial/apfel): CLI and OpenAI-compatible local server for Apple's on-device model
+- [apfel-gui](https://github.com/Arthur-Ficial/apfel-gui): native macOS GUI for working with `apfel`
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
