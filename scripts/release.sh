@@ -92,6 +92,21 @@ gh release create "$TAG" \
   "$SHA_FILE" \
   "$HOMEBREW_CASK"
 
+# ── Update homebrew tap ──────────────────────────────────────────────────────
+print ""
+print "==> Updating homebrew tap (Arthur-Ficial/homebrew-tap) to $VERSION..."
+TAP_REPO="Arthur-Ficial/homebrew-tap"
+TAP_PATH="Casks/apfel-clip.rb"
+CURRENT_TAP_SHA="$(gh api "repos/${TAP_REPO}/contents/${TAP_PATH}" --jq '.sha')"
+ENCODED_CASK="$(base64 < "$HOMEBREW_CASK")"
+gh api "repos/${TAP_REPO}/contents/${TAP_PATH}" \
+  --method PUT \
+  --field message="feat: update apfel-clip cask to ${TAG}" \
+  --field content="$ENCODED_CASK" \
+  --field sha="$CURRENT_TAP_SHA" \
+  --jq '"Tap commit: " + .commit.sha'
+print "==> Homebrew tap updated."
+
 # ── Deploy website ──────────────────────────────────────────────────────────
 print ""
 print "==> Deploying website to Cloudflare Pages..."
@@ -179,6 +194,13 @@ API_TAG="$(curl -s https://api.github.com/repos/Arthur-Ficial/apfel-clip/release
 REDIRECT_LOCATION="$(curl -sI "https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/${APP_NAME}-macos-${ARCH}.zip" | grep -i "^location:" | tr -d '\r')"
 [[ "$REDIRECT_LOCATION" == *"$TAG"* ]] \
     && pass "Stable URL redirects to $TAG" || fail "Stable URL redirects to wrong version: $REDIRECT_LOCATION"
+
+# 7. Homebrew tap has the new version
+TAP_VERSION="$(gh api repos/Arthur-Ficial/homebrew-tap/contents/Casks/apfel-clip.rb --jq '.content' \
+    | base64 -d | grep 'version "' | grep -o '"[^"]*"' | tr -d '"')"
+[[ "$TAP_VERSION" == "$VERSION" ]] \
+    && pass "Homebrew tap version = $VERSION" \
+    || fail "Homebrew tap version = '$TAP_VERSION', expected '$VERSION'"
 
 print ""
 if [[ $FAIL -eq 0 ]]; then
