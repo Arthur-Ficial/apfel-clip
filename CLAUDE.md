@@ -55,3 +55,23 @@ App/ApfelClipApp.swift  →  App/AppDelegate.swift
 - LSUIElement=true in Info.plist (no dock icon)
 - No external Swift package dependencies
 - Popover created after settings load — never shown with empty defaults
+
+## Handling GitHub Issues
+
+When a new issue comes in, follow this process:
+
+1. **Fetch** the full issue with `gh issue view <n> --repo Arthur-Ficial/apfel-clip --json body,comments,title,author,labels`
+2. **Vet** - is it a real bug, valid feature request, or noise?
+   - Does it align with the purpose (fast, private, local clipboard AI)?
+   - Can you reproduce it or trace the root cause in code?
+   - Check comments for additional context
+3. **Fix** if valid:
+   - Write tests first (TDD) for bugs
+   - Keep changes minimal and focused
+   - Run `swift test` - all tests must pass
+4. **Release** if code changed - run `./scripts/release.sh`
+5. **Close** the issue with a short, truthful comment:
+   - What was the problem and root cause
+   - What was fixed (or why closed without a fix)
+   - How to update (`brew upgrade apfel-clip` or download from releases)
+6. **Homebrew tap:** cask files live in `Casks/` in `Arthur-Ficial/homebrew-tap` (NOT `Formula/`). Formula files for CLI tools go in `Formula/`.
