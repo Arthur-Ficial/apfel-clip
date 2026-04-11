@@ -431,6 +431,7 @@ struct PopoverRootView: View {
     }
 
     private var settingsPanel: some View {
+        ScrollView {
         VStack(spacing: 14) {
             SurfaceCard {
                 HStack {
@@ -560,7 +561,7 @@ struct PopoverRootView: View {
                 savedActionsSection
             }
 
-            SurfaceCard(fillAvailableHeight: true) {
+            SurfaceCard {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Recent custom prompts")
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -569,77 +570,76 @@ struct PopoverRootView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(viewModel.settings.recentCustomPrompts, id: \.self) { prompt in
-                                    Text(prompt)
-                                        .font(.caption)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(10)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color.white.opacity(0.8))
-                                        )
-                                }
-                            }
-                        }
-                    }
-
-                    Divider()
-
-                    Text("Action manager")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-
-                    ScrollView {
-                        VStack(spacing: 8) {
-                            ForEach(viewModel.allActions) { action in
-                                HStack(spacing: 10) {
-                                    Image(systemName: action.icon)
-                                        .frame(width: 18)
-                                        .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(action.name)
-                                            .font(.subheadline.weight(.medium))
-                                        Text(action.contentTypes.map(\.rawValue).sorted().joined(separator: " • "))
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    Spacer()
-
-                                    Button {
-                                        Task { await viewModel.toggleFavorite(action.id) }
-                                    } label: {
-                                        Image(systemName: viewModel.isFavorite(action.id) ? "star.fill" : "star")
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                    .tint(viewModel.isFavorite(action.id) ? .orange : nil)
-                                    .help("Favorite action")
-
-                                    Button {
-                                        Task { await viewModel.toggleHidden(action.id) }
-                                    } label: {
-                                        Image(systemName: viewModel.isHidden(action.id) ? "eye.slash.fill" : "eye")
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                    .tint(viewModel.isHidden(action.id) ? .red : nil)
-                                    .help("Hide action")
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(Color.white.opacity(0.78))
-                                )
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(viewModel.settings.recentCustomPrompts, id: \.self) { prompt in
+                                Text(prompt)
+                                    .font(.caption)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color.white.opacity(0.8))
+                                    )
                             }
                         }
                     }
                 }
             }
+
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Action manager")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+
+                    VStack(spacing: 8) {
+                        ForEach(viewModel.allActions) { action in
+                            HStack(spacing: 10) {
+                                Image(systemName: action.icon)
+                                    .frame(width: 18)
+                                    .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(action.name)
+                                        .font(.subheadline.weight(.medium))
+                                    Text(action.contentTypes.map(\.rawValue).sorted().joined(separator: " • "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Button {
+                                    Task { await viewModel.toggleFavorite(action.id) }
+                                } label: {
+                                    Image(systemName: viewModel.isFavorite(action.id) ? "star.fill" : "star")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .tint(viewModel.isFavorite(action.id) ? .orange : nil)
+                                .help("Favorite action")
+
+                                Button {
+                                    Task { await viewModel.toggleHidden(action.id) }
+                                } label: {
+                                    Image(systemName: viewModel.isHidden(action.id) ? "eye.slash.fill" : "eye")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .tint(viewModel.isHidden(action.id) ? .red : nil)
+                                .help("Hide action")
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.white.opacity(0.78))
+                            )
+                        }
+                    }
+                }
+            }
         }
+        } // ScrollView
     }
 
     private var savedActionsSection: some View {
