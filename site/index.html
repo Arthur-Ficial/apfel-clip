@@ -246,8 +246,8 @@
     <p>AI clipboard actions for macOS.<br>Copy text. Press <strong>⌘⇧V</strong>. Pick an action. Done.</p>
 
     <p class="install-label">Download</p>
-    <a class="btn-primary" href="https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip">
-      ↓ Download free (macOS, Apple Silicon)
+    <a class="btn-primary" id="download-btn" href="https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip">
+      <span id="download-label">↓ Download free (macOS, Apple Silicon)</span>
     </a>
 
     <p class="install-label">or install with Homebrew</p>
@@ -307,5 +307,31 @@
 
 </div>
 
+<script>
+fetch('https://api.github.com/repos/Arthur-Ficial/apfel-clip/releases')
+  .then(function(r) { return r.json(); })
+  .then(function(releases) {
+    if (!releases || !releases.length) return;
+    var latest = releases[0];
+    var tag = latest.tag_name;
+    if (!tag) return;
+    var url = 'https://github.com/Arthur-Ficial/apfel-clip/releases/download/' + tag + '/apfel-clip-' + tag + '-macos-arm64.zip';
+    var total = 0;
+    releases.forEach(function(rel) {
+      (rel.assets || []).forEach(function(a) {
+        if (a.name.indexOf('.zip') !== -1) total += (a.download_count || 0);
+      });
+    });
+    var btn = document.getElementById('download-btn');
+    var label = document.getElementById('download-label');
+    if (btn) btn.href = url;
+    if (label) {
+      var text = '↓ Download ' + tag + ' (macOS, Apple Silicon)';
+      if (total > 0) text += '  ·  ' + total.toLocaleString() + '\u00a0downloads';
+      label.textContent = text;
+    }
+  })
+  .catch(function() {});
+</script>
 </body>
 </html>
