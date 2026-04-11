@@ -52,4 +52,6 @@ struct ClipSettings: Codable, Equatable, Sendable {
     var hiddenActionIDs: [String] = []
     var savedCustomActions: [SavedCustomAction] = []
     var actionOrder: [String] = []
+    var checkForUpdatesOnLaunch: Bool = true
+    var lastSeenVersion: String = ""
 }

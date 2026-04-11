@@ -38,7 +38,13 @@ struct PopoverRootView: View {
                     .animation(.easeInOut(duration: 0.18), value: viewModel.screen)
             }
             .animation(.easeInOut(duration: 0.25), value: viewModel.banner != nil)
+
+            if viewModel.isWelcomeVisible {
+                WelcomeOverlayView(viewModel: viewModel)
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
         }
+        .animation(.easeInOut(duration: 0.22), value: viewModel.isWelcomeVisible)
         .frame(width: 540, height: 820)
     }
 
@@ -452,6 +458,24 @@ struct PopoverRootView: View {
                             Text("Launch at login")
                                 .font(.subheadline.weight(.semibold))
                             Text("Open apfel-clip automatically when you sign in.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+
+                    Divider()
+
+                    Toggle(isOn: Binding(
+                        get: { viewModel.settings.checkForUpdatesOnLaunch },
+                        set: { enabled in
+                            Task { await viewModel.updateCheckForUpdatesOnLaunch(enabled) }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Check for updates on launch")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Silently checks for a newer version each time the app starts.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

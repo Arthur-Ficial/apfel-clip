@@ -101,6 +101,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         // Load settings and history FIRST — popover is created after this so the
         // UI is never shown in an empty-defaults state.
         await viewModel.loadPersistedState()
+        viewModel.checkWelcomeScreenNeeded()
+        Task { await viewModel.checkForUpdateSilentlyOnLaunch() }
         configurePopover(viewModel: viewModel)
         await configureLaunchAtLogin(viewModel: viewModel)
 

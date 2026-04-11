@@ -44,6 +44,14 @@ final class ClipControlAPI: @unchecked Sendable {
                 presenter?.hidePopover()
             }
             return ok()
+        case ("GET", "/welcome"):
+            return await welcomeStatus()
+        case ("POST", "/welcome/show"):
+            await MainActor.run { viewModel.showWelcome() }
+            return await welcomeStatus()
+        case ("POST", "/welcome/dismiss"):
+            await viewModel.dismissWelcome()
+            return await welcomeStatus()
         case ("GET", "/update"):
             return await updateStatus()
         case ("POST", "/update/check"):
@@ -77,6 +85,9 @@ final class ClipControlAPI: @unchecked Sendable {
                 "POST /settings",
                 "POST /ui/show",
                 "POST /ui/hide",
+                "GET  /welcome",
+                "POST /welcome/show",
+                "POST /welcome/dismiss",
                 "GET  /update",
                 "POST /update/check",
                 "POST /update/install",
@@ -220,18 +231,31 @@ final class ClipControlAPI: @unchecked Sendable {
         let prompts = object["recent_custom_prompts"] as? [String]
         let favoriteActionIDs = object["favorite_action_ids"] as? [String]
         let hiddenActionIDs = object["hidden_action_ids"] as? [String]
+        let checkForUpdatesOnLaunch = object["check_for_updates_on_launch"] as? Bool
 
         await viewModel.applySettings(
             autoCopy: autoCopy,
             preferredPanel: preferredPanel,
             recentCustomPrompts: prompts,
             favoriteActionIDs: favoriteActionIDs,
-            hiddenActionIDs: hiddenActionIDs
+            hiddenActionIDs: hiddenActionIDs,
+            checkForUpdatesOnLaunch: checkForUpdatesOnLaunch
         )
         if let launchAtLogin {
             await viewModel.updateLaunchAtLogin(launchAtLogin)
         }
         return await settings()
+    }
+
+    private func welcomeStatus() async -> String {
+        await MainActor.run { () -> String in
+            ok([
+                "visible": viewModel.isWelcomeVisible,
+                "current_version": viewModel.currentVersion,
+                "check_for_updates_on_launch": viewModel.settings.checkForUpdatesOnLaunch,
+                "last_seen_version": viewModel.settings.lastSeenVersion,
+            ])
+        }
     }
 
     private func updateStatus() async -> String {

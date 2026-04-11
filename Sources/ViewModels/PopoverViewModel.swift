@@ -29,6 +29,7 @@ final class PopoverViewModel {
     var serverState: ClipServerState = .starting
     var controlPort: Int?
     var updateState: UpdateState = .idle
+    var isWelcomeVisible: Bool = false
     private var bannerDismissTask: Task<Void, Never>?
 
     init(
@@ -311,7 +312,8 @@ final class PopoverViewModel {
         preferredPanel: ClipPrimaryPanel?,
         recentCustomPrompts: [String]?,
         favoriteActionIDs: [String]? = nil,
-        hiddenActionIDs: [String]? = nil
+        hiddenActionIDs: [String]? = nil,
+        checkForUpdatesOnLaunch: Bool? = nil
     ) async {
         if let autoCopy {
             settings.autoCopy = autoCopy
@@ -334,6 +336,9 @@ final class PopoverViewModel {
             let sanitizedHiddenActionIDs = sanitizeActionIDs(hiddenActionIDs)
             settings.hiddenActionIDs = sanitizedHiddenActionIDs
             settings.favoriteActionIDs.removeAll { sanitizedHiddenActionIDs.contains($0) }
+        }
+        if let checkForUpdatesOnLaunch {
+            settings.checkForUpdatesOnLaunch = checkForUpdatesOnLaunch
         }
         await settingsStore.save(settings)
     }
@@ -595,6 +600,44 @@ final class PopoverViewModel {
 
     private func catalogRank(of actionID: String) -> Int {
         ClipActionCatalog.all.firstIndex(where: { $0.id == actionID }) ?? .max
+    }
+
+    // ── Welcome screen ───────────────────────────────────────────────────────
+
+    func checkWelcomeScreenNeeded() {
+        isWelcomeVisible = settings.lastSeenVersion != currentVersion
+    }
+
+    func dismissWelcome() async {
+        isWelcomeVisible = false
+        settings.lastSeenVersion = currentVersion
+        await persistSettings()
+    }
+
+    func showWelcome() {
+        isWelcomeVisible = true
+    }
+
+    func updateCheckForUpdatesOnLaunch(_ enabled: Bool) async {
+        settings.checkForUpdatesOnLaunch = enabled
+        await persistSettings()
+    }
+
+    /// Silently checks for updates on launch — never sets error state, swallows all failures.
+    func checkForUpdateSilentlyOnLaunch() async {
+        guard settings.checkForUpdatesOnLaunch, updateState == .idle else { return }
+        do {
+            let url = URL(string: "https://api.github.com/repos/Arthur-Ficial/apfel-clip/releases/latest")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tagName = json["tag_name"] as? String else { return }
+            let latestVersion = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+            if Self.isVersionNewer(latestVersion, than: currentVersion) {
+                updateState = .updateAvailable(newVersion: latestVersion)
+            }
+        } catch {
+            // Silent: never surface network errors from background launch check
+        }
     }
 
     // ── Update checking ──────────────────────────────────────────────────────

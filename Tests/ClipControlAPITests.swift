@@ -93,6 +93,45 @@ struct ClipControlAPITests {
         #expect(json["status"] as? String == "error")
     }
 
+    @Test("GET /welcome returns welcome state")
+    func welcomeRoute() async throws {
+        let (api, _, _, _) = await makeAPI()
+        let response = await api.handle(method: "GET", path: "/welcome")
+        let json = try parse(response)
+        #expect(json["status"] as? String == "ok")
+        #expect(json["visible"] is Bool)
+        #expect(json["check_for_updates_on_launch"] as? Bool == true)
+        #expect(json["current_version"] is String)
+    }
+
+    @Test("POST /welcome/show makes overlay visible")
+    func welcomeShowRoute() async throws {
+        let (api, viewModel, _, _) = await makeAPI()
+        _ = await api.handle(method: "POST", path: "/welcome/show")
+        #expect(viewModel.isWelcomeVisible == true)
+    }
+
+    @Test("POST /welcome/dismiss hides overlay and saves version")
+    func welcomeDismissRoute() async throws {
+        let (api, viewModel, _, _) = await makeAPI()
+        _ = await api.handle(method: "POST", path: "/welcome/show")
+        #expect(viewModel.isWelcomeVisible == true)
+        _ = await api.handle(method: "POST", path: "/welcome/dismiss")
+        #expect(viewModel.isWelcomeVisible == false)
+        #expect(viewModel.settings.lastSeenVersion == viewModel.currentVersion)
+    }
+
+    @Test("POST /settings accepts check_for_updates_on_launch")
+    func settingsCheckForUpdates() async throws {
+        let (api, viewModel, _, _) = await makeAPI()
+        _ = await api.handle(
+            method: "POST",
+            path: "/settings",
+            body: #"{"check_for_updates_on_launch": false}"#
+        )
+        #expect(viewModel.settings.checkForUpdatesOnLaunch == false)
+    }
+
     @Test("GET /update returns update state")
     func updateRoute() async throws {
         let (api, _, _, _) = await makeAPI()
