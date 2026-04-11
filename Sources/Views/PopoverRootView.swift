@@ -39,13 +39,15 @@ struct PopoverRootView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: viewModel.banner != nil)
 
-            if viewModel.isWelcomeVisible {
-                WelcomeOverlayView(viewModel: viewModel)
-                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
-            }
         }
-        .animation(.easeInOut(duration: 0.22), value: viewModel.isWelcomeVisible)
         .frame(width: 540, height: 820)
+        .sheet(isPresented: Binding(
+            get: { viewModel.isWelcomeVisible },
+            set: { if !$0 { Task { await viewModel.dismissWelcome() } } }
+        )) {
+            WelcomeSheetView(viewModel: viewModel)
+                .frame(width: 480)
+        }
     }
 
     private var header: some View {

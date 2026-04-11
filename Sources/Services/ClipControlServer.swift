@@ -44,6 +44,9 @@ final class ClipControlAPI: @unchecked Sendable {
                 presenter?.hidePopover()
             }
             return ok()
+        case ("POST", "/debug/reset-first-run"):
+            await viewModel.debugResetFirstRun()
+            return await welcomeStatus()
         case ("GET", "/welcome"):
             return await welcomeStatus()
         case ("POST", "/welcome/show"):
@@ -85,6 +88,7 @@ final class ClipControlAPI: @unchecked Sendable {
                 "POST /settings",
                 "POST /ui/show",
                 "POST /ui/hide",
+                "POST /debug/reset-first-run",
                 "GET  /welcome",
                 "POST /welcome/show",
                 "POST /welcome/dismiss",
@@ -216,6 +220,7 @@ final class ClipControlAPI: @unchecked Sendable {
                 "recent_custom_prompts": viewModel.settings.recentCustomPrompts,
                 "favorite_action_ids": viewModel.settings.favoriteActionIDs,
                 "hidden_action_ids": viewModel.settings.hiddenActionIDs,
+                "check_for_updates_on_launch": viewModel.settings.checkForUpdatesOnLaunch,
             ])
         }
     }

@@ -27,24 +27,36 @@ struct WelcomeTests {
         #expect(ClipSettings().lastSeenVersion == "")
     }
 
-    // ── checkWelcomeScreenNeeded ─────────────────────────────────────────────
+    // ── checkWelcomeScreenNeeded — first run only ────────────────────────────
 
-    @Test("welcome shows when lastSeenVersion differs from currentVersion")
-    func showsWhenVersionDiffers() async {
+    @Test("welcome shows on first run when lastSeenVersion is empty")
+    func showsOnFirstRun() async {
         let vm = makeViewModel()
         await vm.loadPersistedState()  // lastSeenVersion stays ""
         vm.checkWelcomeScreenNeeded()
-        // currentVersion is "unknown" in tests (no bundle), lastSeenVersion is "" → different
         #expect(vm.isWelcomeVisible == true)
     }
 
-    @Test("welcome hidden when lastSeenVersion matches currentVersion")
-    func hiddenWhenVersionMatches() async {
+    @Test("welcome hidden after first run when lastSeenVersion is set")
+    func hiddenAfterFirstRun() async {
         let store = MockSettingsStore()
         let vm = makeViewModel(settingsStore: store)
-        // Pre-seed lastSeenVersion = currentVersion before loading
+        // Any non-empty lastSeenVersion = has been seen before
         var s = ClipSettings()
-        s.lastSeenVersion = vm.currentVersion
+        s.lastSeenVersion = "1.0.0"
+        await store.save(s)
+        await vm.loadPersistedState()
+        vm.checkWelcomeScreenNeeded()
+        #expect(vm.isWelcomeVisible == false)
+    }
+
+    @Test("welcome hidden on update (version change doesn't re-trigger)")
+    func hiddenOnVersionUpdate() async {
+        let store = MockSettingsStore()
+        let vm = makeViewModel(settingsStore: store)
+        // lastSeenVersion is old version — still hidden (first-run-only logic)
+        var s = ClipSettings()
+        s.lastSeenVersion = "0.1.0"
         await store.save(s)
         await vm.loadPersistedState()
         vm.checkWelcomeScreenNeeded()
@@ -81,6 +93,26 @@ struct WelcomeTests {
         #expect(vm.isWelcomeVisible == false)
         vm.showWelcome()
         #expect(vm.isWelcomeVisible == true)
+    }
+
+    // ── debugResetFirstRun ───────────────────────────────────────────────────
+
+    @Test("debugResetFirstRun shows sheet and clears lastSeenVersion")
+    func debugReset() async {
+        let store = MockSettingsStore()
+        let vm = makeViewModel(settingsStore: store)
+        // Start as if already dismissed
+        var s = ClipSettings()
+        s.lastSeenVersion = "99.9.9"
+        await store.save(s)
+        await vm.loadPersistedState()
+        vm.checkWelcomeScreenNeeded()
+        #expect(vm.isWelcomeVisible == false)
+
+        await vm.debugResetFirstRun()
+
+        #expect(vm.isWelcomeVisible == true)
+        #expect(vm.settings.lastSeenVersion == "")
     }
 
     // ── checkForUpdateSilentlyOnLaunch ───────────────────────────────────────

@@ -605,7 +605,7 @@ final class PopoverViewModel {
     // ── Welcome screen ───────────────────────────────────────────────────────
 
     func checkWelcomeScreenNeeded() {
-        isWelcomeVisible = settings.lastSeenVersion != currentVersion
+        isWelcomeVisible = settings.lastSeenVersion.isEmpty
     }
 
     func dismissWelcome() async {
@@ -615,6 +615,13 @@ final class PopoverViewModel {
     }
 
     func showWelcome() {
+        isWelcomeVisible = true
+    }
+
+    /// Debug/testing: resets firstRun state so the welcome sheet appears again.
+    func debugResetFirstRun() async {
+        settings.lastSeenVersion = ""
+        await persistSettings()
         isWelcomeVisible = true
     }
 

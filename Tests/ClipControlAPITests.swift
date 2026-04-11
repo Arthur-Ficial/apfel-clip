@@ -121,15 +121,35 @@ struct ClipControlAPITests {
         #expect(viewModel.settings.lastSeenVersion == viewModel.currentVersion)
     }
 
+    @Test("POST /debug/reset-first-run shows sheet and clears lastSeenVersion")
+    func debugResetRoute() async throws {
+        let (api, viewModel, _, _) = await makeAPI()
+        _ = await api.handle(method: "POST", path: "/welcome/dismiss")
+        #expect(viewModel.isWelcomeVisible == false)
+        _ = await api.handle(method: "POST", path: "/debug/reset-first-run")
+        #expect(viewModel.isWelcomeVisible == true)
+        #expect(viewModel.settings.lastSeenVersion == "")
+    }
+
     @Test("POST /settings accepts check_for_updates_on_launch")
     func settingsCheckForUpdates() async throws {
         let (api, viewModel, _, _) = await makeAPI()
-        _ = await api.handle(
+        let response = await api.handle(
             method: "POST",
             path: "/settings",
             body: #"{"check_for_updates_on_launch": false}"#
         )
+        let json = try parse(response)
         #expect(viewModel.settings.checkForUpdatesOnLaunch == false)
+        #expect(json["check_for_updates_on_launch"] as? Bool == false)
+    }
+
+    @Test("GET /settings includes check_for_updates_on_launch")
+    func settingsGetIncludesCheckForUpdates() async throws {
+        let (api, _, _, _) = await makeAPI()
+        let response = await api.handle(method: "GET", path: "/settings")
+        let json = try parse(response)
+        #expect(json["check_for_updates_on_launch"] as? Bool == true)
     }
 
     @Test("GET /update returns update state")
