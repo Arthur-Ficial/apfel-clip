@@ -4,910 +4,308 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Primary SEO -->
-  <title>apfel-clip: AI clipboard actions for macOS</title>
-  <meta name="description" content="Copy text, code, or an error. Press Cmd+Shift+V. Pick an action. Paste the result. On-device AI, no API keys, no cloud, no data leaving your Mac.">
+  <title>apfel-clip — AI clipboard actions for macOS</title>
+  <meta name="description" content="Copy text. Press ⌘⇧V. Pick an action. Paste the result. On-device AI, no API keys, no cloud.">
   <link rel="canonical" href="https://apfel-clip.franzai.com/">
 
-  <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack) -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="apfel-clip">
   <meta property="og:url" content="https://apfel-clip.franzai.com/">
-  <meta property="og:title" content="apfel-clip: AI clipboard actions for macOS">
-  <meta property="og:description" content="Copy text, code, or an error. Press Cmd+Shift+V. Pick an action. Paste the result. On-device AI via Apple Intelligence. No API keys. No cloud.">
+  <meta property="og:title" content="apfel-clip — AI clipboard actions for macOS">
+  <meta property="og:description" content="Copy text. Press ⌘⇧V. Pick an action. Paste the result. On-device AI, no API keys, no cloud.">
   <meta property="og:image" content="https://apfel-clip.franzai.com/img/screen-actions.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="apfel-clip showing AI action suggestions for clipboard text">
-  <meta property="og:locale" content="en_US">
-
-  <!-- Twitter / X card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="apfel-clip: AI clipboard actions for macOS">
-  <meta name="twitter:description" content="Copy text, code, or an error. Press Cmd+Shift+V. Pick an action. Paste the result. On-device AI. No API keys. No cloud.">
+  <meta name="twitter:title" content="apfel-clip — AI clipboard actions for macOS">
+  <meta name="twitter:description" content="Copy text. Press ⌘⇧V. Pick an action. Paste the result. On-device AI, no API keys, no cloud.">
   <meta name="twitter:image" content="https://apfel-clip.franzai.com/img/screen-actions.png">
-  <meta name="twitter:image:alt" content="apfel-clip showing AI action suggestions for clipboard text">
-
-  <!-- App / platform hints -->
-  <meta name="application-name" content="apfel-clip">
-  <meta name="apple-mobile-web-app-title" content="apfel-clip">
   <meta name="theme-color" content="#2db44e">
 
-  <!-- Structured data: SoftwareApplication -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "apfel-clip",
-    "operatingSystem": "macOS 26+",
+    "operatingSystem": "macOS",
     "applicationCategory": "ProductivityApplication",
     "description": "AI-powered clipboard actions for macOS. On-device, private, no API keys required.",
     "url": "https://apfel-clip.franzai.com/",
     "downloadUrl": "https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip",
     "softwareVersion": "0.4.1",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "author": {
-      "@type": "Person",
-      "name": "Franz Enzenhofer",
-      "url": "https://fullstackoptimization.com"
-    }
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
   }
   </script>
 
   <link rel="icon" type="image/png" href="img/icon.png">
-  <link rel="preload" as="image" href="img/screen-actions.png" fetchpriority="high">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --brand: #2db44e;
-      --dark:  #0d1117;
-      --dark2: #161b22;
-      --light: #f0faf3;
-      --text-dark: #e6edf3;
-      --muted: #8b949e;
-      --text:  #1a1a1a;
-      --text2: #4a4a4a;
-      --bd:    #30363d;
-      --bdl:   #d8e4da;
-      --r:     12px;
+      --green: #2db44e;
+      --green-dark: #1f8a39;
+      --text: #111;
+      --muted: #666;
+      --border: #e0e0e0;
     }
 
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       background: #fff;
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.5;
       -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── NAV ── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      background: #fff;
-      border-bottom: 1px solid var(--bdl);
-    }
-    .nav-brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-    .nav-brand img { width: 24px; height: 24px; border-radius: 5px; }
-    .nav-brand span { font-weight: 700; font-size: 16px; color: var(--brand); letter-spacing: -.2px; }
-    .nav-right { display: flex; align-items: center; gap: 8px; }
-    .nav-gh { display: none !important; }
-
-    .btn-dark {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--dark);
-      color: #fff;
-      padding: 7px 14px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-    .btn-green {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--brand);
-      color: #fff;
-      padding: 7px 14px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-    .btn-outline {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: transparent;
-      color: var(--text-dark);
-      padding: 9px 18px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 14px;
-      border: 1px solid var(--bd);
+      overflow-x: hidden;
     }
 
     /* ── LAYOUT ── */
-    .wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 20px; }
-
-    /* Mobile hero centering */
-    .hero-text { text-align: center; }
-    .hero-meta { justify-content: center; }
-
-    /* ── HERO ── */
-    .hero { padding: 56px 0 48px; background: #fff; }
-    .hero-eyebrow {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--brand);
-      margin-bottom: 14px;
-    }
-    .hero h1 {
-      font-size: clamp(26px, 7vw, 52px);
-      font-weight: 800;
-      letter-spacing: -1.5px;
-      line-height: 1.05;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-    .hero h1 em { font-style: normal; color: var(--brand); }
-    .hero-sub {
-      font-size: 16px;
-      color: var(--text2);
-      line-height: 1.6;
-      margin-bottom: 28px;
-    }
-    .hero-ctas { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-bottom: 24px; }
-    .hero-meta {
-      display: flex;
-      gap: 0;
-      flex-wrap: wrap;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .hero-meta span {
-      padding: 3px 10px 3px 0;
-    }
-    .hero-meta span::before {
-      content: "";
-      display: inline-block;
-      width: 5px;
-      height: 5px;
-      background: var(--brand);
-      border-radius: 50%;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-    .hero-img {
-      display: flex;
-      justify-content: center;
-      margin-top: 40px;
-    }
-    .hero-img img {
+    .wrap {
       width: 100%;
-      max-width: 260px;
-      height: auto;
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.15), 0 4px 12px rgba(0,0,0,.08);
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 20px;
     }
 
-    /* ── MARQUEE BANNER ── */
-    .banner {
-      background: var(--brand);
-      padding: 18px 20px;
+    /* ── HEADER ── */
+    header {
+      padding: 20px 0 0;
       text-align: center;
     }
-    .banner p {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: #fff;
-      line-height: 1.5;
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      margin-bottom: 16px;
     }
 
-    /* ── DARK SECTION ── */
-    .sec-dark { background: var(--dark); padding: 64px 0; }
-    .sec-dark .lbl {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--brand);
-      margin-bottom: 12px;
-    }
-    .sec-dark h2 {
-      font-size: clamp(22px, 5vw, 36px);
+    header h1 {
+      font-size: 2rem;
       font-weight: 800;
-      color: #fff;
-      letter-spacing: -.5px;
-      line-height: 1.15;
-      margin-bottom: 12px;
-    }
-    .sec-dark .sub {
-      font-size: 15px;
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 36px;
-    }
-
-    /* ── LIGHT / WHITE SECTION ── */
-    .sec-light { background: var(--light); padding: 64px 0; }
-    .sec-white { background: #fff; padding: 64px 0; }
-    .lbl {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--brand);
-      margin-bottom: 12px;
-    }
-    h2.sh {
-      font-size: clamp(22px, 5vw, 34px);
-      font-weight: 800;
-      letter-spacing: -.5px;
-      line-height: 1.15;
+      letter-spacing: -0.5px;
       color: var(--text);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-    p.sub {
-      font-size: 15px;
-      color: var(--text2);
-      line-height: 1.6;
-      margin-bottom: 36px;
+
+    header h1 span { color: var(--green); }
+
+    header p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      margin-bottom: 32px;
+      line-height: 1.55;
+    }
+
+    /* ── BUTTONS ── */
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 18px 24px;
+      background: var(--green);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 14px;
+      text-decoration: none;
+      margin-bottom: 12px;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--green-dark); }
+
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 16px 24px;
+      background: #f5f5f5;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 14px;
+      text-decoration: none;
+      border: 1.5px solid var(--border);
+      margin-bottom: 8px;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: #ebebeb; }
+
+    .brew-cmd {
+      display: block;
+      width: 100%;
+      padding: 16px 20px;
+      background: #f5f5f5;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.9rem;
+      color: var(--text);
+      text-align: center;
+      user-select: all;
+      cursor: text;
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+
+    .install-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 24px 0 10px;
+      text-align: center;
+    }
+
+    /* ── SCREENSHOT ── */
+    .screenshot {
+      margin: 36px 0;
+      text-align: center;
+    }
+    .screenshot img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
     }
 
     /* ── HOW IT WORKS ── */
     .steps {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1px;
-      background: var(--bd);
-      border-radius: var(--r);
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin: 32px 0;
     }
     .step {
-      background: var(--dark2);
-      padding: 24px;
       display: flex;
-      gap: 16px;
       align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      background: #f9f9f9;
+      border-radius: 12px;
     }
-    .step-n {
+    .step-num {
       flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      border: 1.5px solid var(--brand);
+      width: 32px;
+      height: 32px;
+      background: var(--green);
+      color: #fff;
       border-radius: 50%;
-      color: var(--brand);
-      font-size: 13px;
-      font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 2px;
-    }
-    .step h3 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-    .step p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
-    .kbd {
-      display: inline-block;
-      background: var(--dark);
-      border: 1px solid var(--bd);
-      border-bottom: 2px solid var(--bd);
-      border-radius: 4px;
-      padding: 1px 6px;
-      font-family: ui-monospace, monospace;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--brand);
-    }
-
-    /* ── REQUIREMENTS ── */
-    .req-list {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1px;
-      background: var(--bdl);
-      border-radius: var(--r);
-      overflow: hidden;
-    }
-    .req-item {
-      background: #fff;
-      padding: 18px 20px;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-    .req-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--brand);
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 7px;
-    }
-    .req-item h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-    .req-item p  { font-size: 12px; color: var(--text2); line-height: 1.5; }
-    .req-note {
-      background: #fffbea;
-      border: 1px solid #f0d060;
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 12px;
-      color: #5c4400;
-      line-height: 1.6;
-      margin-top: 14px;
-    }
-
-    /* ── INSTALL ── */
-    .i-primary {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      background: #fff;
-      border: 2px solid var(--brand);
-      border-radius: var(--r);
-      padding: 24px;
-      margin-bottom: 12px;
-    }
-    .i-primary h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .i-primary p { font-size: 14px; color: var(--text2); margin-bottom: 12px; }
-    .i-more {
-      border: 1px solid var(--bdl);
-      border-radius: var(--r);
-      background: #fff;
-      overflow: hidden;
-    }
-    .i-more summary {
-      padding: 12px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      cursor: pointer;
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .i-more summary::-webkit-details-marker { display: none; }
-    .i-more summary::before { content: "+"; font-size: 16px; color: var(--brand); }
-    .i-more[open] summary::before { content: "-"; }
-    .i-more-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 0 16px 16px;
-    }
-    .i-card { background: #f8f8f8; border: 1px solid var(--bdl); border-radius: var(--r); padding: 16px; }
-    .i-card h3 {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .07em;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-    pre {
-      background: var(--dark);
-      color: #b8f0c0;
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-family: ui-monospace, "SF Mono", monospace;
-      font-size: 12px;
-      line-height: 1.7;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    pre .c { color: #4a7a52; }
-    .i-note { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
-    code {
-      background: #f0f4f8;
-      padding: 1px 5px;
-      border-radius: 4px;
-      font-family: ui-monospace, monospace;
-      font-size: .88em;
-      color: var(--text);
-    }
-    .after { background: #fff; border: 1px solid var(--bdl); border-radius: var(--r); padding: 16px; }
-    .after h3 {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .07em;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-    .after ol { padding-left: 18px; }
-    .after li { font-size: 13px; color: var(--text2); line-height: 2.1; }
-    .gk { background: #fff8f0; border: 1px solid #f5c080; border-radius: 8px; padding: 12px 14px; }
-    .gk strong { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #8b4a00; margin-bottom: 4px; }
-    .gk p { font-size: 12px; color: #6b3800; line-height: 1.6; }
-
-    /* ── FEATURES ── */
-    .feat-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1px;
-      background: var(--bd);
-      border-radius: var(--r);
-      overflow: hidden;
-    }
-    .feat { background: var(--dark2); padding: 22px 24px; }
-    .feat .ftag {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--brand);
-      margin-bottom: 6px;
-    }
-    .feat h3 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-    .feat p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
-
-    /* ── SCREENSHOTS ── */
-    .screens { display: grid; grid-template-columns: 1fr; gap: 32px; }
-    .sc .sc-tag {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .sc h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .sc p  { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 16px; }
-    .sc img {
-      display: block;
-      width: 100%;
-      max-width: 280px;
-      height: auto;
-      margin: 0 auto;
-      border-radius: 12px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.10);
-      border: 1px solid var(--bdl);
-    }
-
-    /* ── COPY BUTTON ── */
-    .pre-wrap { position: relative; }
-    .copy-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(255,255,255,.08);
-      color: var(--muted);
-      border: 1px solid var(--bd);
-      border-radius: 5px;
-      padding: 3px 9px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-      line-height: 1.6;
-    }
-    .copy-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
-    .copy-btn.copied { color: var(--brand); border-color: var(--brand); }
-
-    /* ── OPEN SOURCE ── */
-    .sec-os { background: var(--dark); padding: 64px 20px; text-align: center; }
-    .sec-os h2 {
-      font-size: clamp(22px, 5vw, 32px);
       font-weight: 800;
-      color: #fff;
-      letter-spacing: -.5px;
-      margin-bottom: 12px;
+      font-size: 0.9rem;
     }
-    .sec-os p {
-      font-size: 15px;
-      color: var(--muted);
-      margin-bottom: 28px;
-      line-height: 1.6;
-      max-width: 440px;
-      margin-left: auto;
-      margin-right: auto;
+    .step-text strong { display: block; font-weight: 700; margin-bottom: 2px; }
+    .step-text span { font-size: 0.9rem; color: var(--muted); }
+
+    /* ── APFEL NOTE ── */
+    .apfel-note {
+      margin: 28px 0;
+      padding: 18px;
+      background: #f0faf3;
+      border: 1.5px solid #b6e4c5;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      color: #1a4a28;
+      text-align: center;
+      line-height: 1.55;
     }
-    .os-links { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .apfel-note a { color: var(--green-dark); font-weight: 700; }
 
     /* ── FOOTER ── */
     footer {
-      background: var(--dark2);
-      border-top: 1px solid var(--bd);
-      padding: 24px 20px;
+      border-top: 1px solid var(--border);
+      padding: 24px 0 32px;
       text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
     }
-    .foot-links {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-    .foot-links a { font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; }
-    .foot-links a:hover { color: var(--brand); }
-    footer p { font-size: 11px; color: var(--muted); }
-    footer a { color: var(--brand); text-decoration: none; }
+    footer a { color: var(--muted); text-decoration: underline; }
+    footer a:hover { color: var(--text); }
 
-    /* ── DESKTOP ENHANCEMENTS ── */
-    @media (min-width: 760px) {
-      nav { padding: 14px 48px; }
-      .nav-gh { display: inline-flex; }
-      .hero-ctas { flex-direction: row; }
-
-      .wrap { max-width: 1100px; padding: 0 48px; }
-
-      .hero { padding: 80px 0 72px; }
-      .hero-inner {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 64px;
-        align-items: center;
-      }
-      .hero-text { text-align: left; }
-      .hero-meta { justify-content: flex-start; }
-      .hero-ctas { justify-content: flex-start; }
-      .hero-img { margin-top: 0; justify-content: flex-end; }
-      .hero-img img { max-width: 300px; }
-
-      .sec-dark  { padding: 88px 0; }
-      .sec-light { padding: 88px 0; }
-      .sec-white { padding: 88px 0; }
-
-      .steps { grid-template-columns: repeat(3, 1fr); }
-      .step  { flex-direction: column; }
-
-      .req-list { grid-template-columns: repeat(3, 1fr); }
-
-      .i-primary { flex-direction: row; align-items: flex-start; }
-      .i-primary-text { flex: 1; }
-      .after { flex: 1; }
-      .i-more-inner { display: grid; grid-template-columns: repeat(3, 1fr); }
-
-      .feat-grid { grid-template-columns: repeat(3, 1fr); }
-
-      .screens { grid-template-columns: repeat(2, 1fr); }
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
     }
   </style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav>
-  <a class="nav-brand" href="#">
-    <img src="img/icon.png" alt="" width="24" height="24">
-    <span>apfel-clip</span>
-  </a>
-  <div class="nav-right">
-    <a class="btn-dark nav-gh" href="https://github.com/Arthur-Ficial/apfel-clip" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
-    <a class="btn-green" href="#install"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Download</a>
-  </div>
-</nav>
+<div class="wrap">
 
-<!-- Hero -->
-<section class="hero">
-  <div class="wrap">
-    <div class="hero-inner">
-      <div class="hero-text">
-        <div class="hero-eyebrow">macOS menu bar app</div>
-        <h1>AI clipboard actions.<br><em>Instant. Private.</em></h1>
-        <p class="hero-sub">Copy anything. Hit <strong>&#x2318;&#x21E7;V</strong>. Pick an action. Apple's on-device model transforms it in seconds. No cloud, no API keys, nothing leaves your Mac.</p>
-        <div class="hero-ctas">
-          <a class="btn-green" href="#install"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Download free</a>
-          <a class="btn-dark" href="https://github.com/Arthur-Ficial/apfel-clip" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
-        </div>
-        <div class="hero-meta">
-          <span>MIT Open Source</span>
-          <span>macOS 26 Tahoe</span>
-          <span>Apple Silicon</span>
-          <span>100% On-Device</span>
-        </div>
+  <header>
+    <img class="logo" src="img/icon.png" alt="apfel-clip icon">
+    <h1><span>apfel</span>-clip</h1>
+    <p>AI clipboard actions for macOS.<br>Copy text. Press <strong>⌘⇧V</strong>. Pick an action. Done.</p>
+
+    <p class="install-label">Download</p>
+    <a class="btn-primary" href="https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip">
+      ↓ Download free (macOS, Apple Silicon)
+    </a>
+
+    <p class="install-label">or install with Homebrew</p>
+    <code class="brew-cmd">brew install --cask arthur-ficial/tap/apfel-clip</code>
+  </header>
+
+  <div class="screenshot">
+    <img src="img/screen-actions.png" alt="apfel-clip showing AI action suggestions" loading="lazy">
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        <strong>Copy anything</strong>
+        <span>Text, code, an error message — whatever's on your clipboard.</span>
       </div>
-      <div class="hero-img">
-        <img src="img/screen-actions.png" alt="apfel-clip showing AI actions for clipboard text"
-             width="540" height="787" fetchpriority="high">
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        <strong>Press ⌘⇧V</strong>
+        <span>apfel-clip appears in your menu bar, ready to go.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        <strong>Pick an action</strong>
+        <span>Fix grammar, translate, explain, reformat — one tap.</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">
+        <strong>Paste the result</strong>
+        <span>Copied to clipboard automatically. Nothing left your Mac.</span>
       </div>
     </div>
   </div>
-</section>
 
-<!-- Banner -->
-<div class="banner">
-  <p>Everything runs on your device. No network calls. No data leaves your Mac.</p>
+  <div class="apfel-note">
+    ✅ <strong>No setup needed.</strong> Powered by <a href="https://github.com/Arthur-Ficial/apfel" target="_blank" rel="noopener">apfel</a> — the on-device AI engine — which is bundled inside the app. No API keys, no cloud, works offline.
+  </div>
+
+  <hr class="divider">
+
+  <footer>
+    <p>
+      <a href="https://github.com/Arthur-Ficial/apfel-clip" target="_blank" rel="noopener">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/Arthur-Ficial/apfel-clip/releases" target="_blank" rel="noopener">All releases</a>
+      &nbsp;·&nbsp;
+      Free &amp; open source
+    </p>
+  </footer>
+
 </div>
 
-<!-- How it works -->
-<section class="sec-dark" id="how-it-works">
-  <div class="wrap">
-    <div class="lbl" style="color:var(--brand)">How it works</div>
-    <h2>Three steps from copy to done.</h2>
-    <p class="sub">No setup beyond installation. Just copy and hit the hotkey.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-n">1</div>
-        <div>
-          <h3>Copy anything</h3>
-          <p>Text, code, a stack trace, JSON. The app detects the content type and shows the right actions automatically.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-n">2</div>
-        <div>
-          <h3>Hit <span class="kbd">&#x2318;&#x21E7;V</span></h3>
-          <p>The popover opens from any app with tailored actions for prose, code, errors, or JSON.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-n">3</div>
-        <div>
-          <h3>Pick, paste, done</h3>
-          <p>Run an action. The result lands in your clipboard ready to paste, or review it first in the result panel.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Requirements -->
-<section class="sec-white" id="requirements">
-  <div class="wrap">
-    <div class="lbl">Before you install</div>
-    <h2 class="sh">Requirements</h2>
-    <p class="sub">apfel-clip runs entirely on your Mac using Apple's on-device model. You need all three.</p>
-    <div class="req-list">
-      <div class="req-item">
-        <div class="req-dot"></div>
-        <div>
-          <h3>macOS 26 (Tahoe)</h3>
-          <p>Required for Apple Intelligence. Apple menu &gt; System Settings &gt; Software Update.</p>
-        </div>
-      </div>
-      <div class="req-item">
-        <div class="req-dot"></div>
-        <div>
-          <h3>Apple Silicon (M1 or later)</h3>
-          <p>Apple Intelligence runs on-chip only. Apple menu &gt; About This Mac must say M1, M2, M3, or M4.</p>
-        </div>
-      </div>
-      <div class="req-item">
-        <div class="req-dot"></div>
-        <div>
-          <h3>Apple Intelligence enabled</h3>
-          <p>Enable in System Settings &gt; Apple Intelligence &amp; Siri. Requires English device language.</p>
-        </div>
-      </div>
-    </div>
-    <div class="req-note">
-      <strong>Also needed:</strong> <a href="https://github.com/Arthur-Ficial/apfel" style="color:#2a7a3b;font-weight:600">apfel</a>, the on-device AI engine.
-      Homebrew, the curl installer, and the zip download all embed it automatically.
-      Source builds only: <code>brew install Arthur-Ficial/tap/apfel</code>
-    </div>
-  </div>
-</section>
-
-<!-- Install -->
-<section class="sec-light" id="install">
-  <div class="wrap">
-    <div class="lbl">Install</div>
-    <h2 class="sh">Get apfel-clip</h2>
-    <p class="sub">Free. Signed and notarised. Apple Silicon only.</p>
-
-    <!-- Primary: download -->
-    <div class="i-primary">
-      <div class="i-primary-text">
-        <h3>Download</h3>
-        <p>Download the zip, unzip, drag <strong>apfel-clip.app</strong> to your Applications folder, and open it. That is it.</p>
-        <a class="btn-green" id="download-btn" href="https://github.com/Arthur-Ficial/apfel-clip/releases/latest/download/apfel-clip-macos-arm64.zip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> <span id="download-label">Download free (arm64)</span></a>
-        <p class="i-note" style="margin-top:10px;">Signed and notarised by Apple. macOS opens it without any security warning. SHA-256 checksums in each <a href="https://github.com/Arthur-Ficial/apfel-clip/releases" style="color:var(--brand)">release</a>.</p>
-      </div>
-      <div class="after">
-        <h3>After installing</h3>
-        <ol>
-          <li>Open <strong>apfel-clip</strong> from Applications</li>
-          <li>The clipboard icon appears in your menu bar</li>
-          <li>Copy any text, code, or error message</li>
-          <li>Press <strong>&#x2318;&#x21E7;V</strong> and pick an action</li>
-          <li>The result lands in your clipboard instantly</li>
-        </ol>
-      </div>
-    </div>
-
-    <!-- Secondary: other options -->
-    <details class="i-more">
-      <summary>Other install options</summary>
-      <div class="i-more-inner">
-        <div class="i-card">
-          <h3>Homebrew</h3>
-          <pre>brew tap Arthur-Ficial/tap
-brew install --cask apfel-clip</pre>
-          <p class="i-note">Handles updates with <code>brew upgrade --cask apfel-clip</code>.</p>
-        </div>
-        <div class="i-card">
-          <h3>Curl installer</h3>
-          <pre>curl -fsSL https://raw.githubusercontent.com/Arthur-Ficial/apfel-clip/main/scripts/install.sh | zsh</pre>
-          <p class="i-note">Installs to <code>/Applications</code> and links <code>apfel-clip</code> to <code>~/.local/bin</code>.</p>
-        </div>
-        <div class="i-card">
-          <h3>Build from source</h3>
-          <pre>git clone https://github.com/Arthur-Ficial/apfel-clip.git
-cd apfel-clip &amp;&amp; make install</pre>
-          <p class="i-note">Requires Xcode command-line tools and <code>apfel</code> on PATH. Source builds only: <code>brew install Arthur-Ficial/tap/apfel</code></p>
-        </div>
-      </div>
-    </details>
-
-  </div>
-</section>
-
-<!-- Features -->
-<section class="sec-dark" id="features">
-  <div class="wrap">
-    <div class="lbl" style="color:var(--brand)">Features</div>
-    <h2>Everything you need.</h2>
-    <p class="sub">Designed around the fastest copy, transform, paste flow.</p>
-    <div class="feat-grid">
-      <div class="feat">
-        <div class="ftag">Privacy</div>
-        <h3>Fully on-device</h3>
-        <p>No API keys, no network calls, no data sent anywhere. Powered by <a href="https://github.com/Arthur-Ficial/apfel" style="color:var(--brand)">apfel</a>.</p>
-      </div>
-      <div class="feat">
-        <div class="ftag">Intelligence</div>
-        <h3>Content-aware actions</h3>
-        <p>Detects text, code, JSON, and errors. Shows only the relevant actions for what you copied.</p>
-      </div>
-      <div class="feat">
-        <div class="ftag">Speed</div>
-        <h3>Global hotkey</h3>
-        <p>&#x2318;&#x21E7;V opens the popover from any app, any time, no matter what is focused.</p>
-      </div>
-      <div class="feat">
-        <div class="ftag">Customisation</div>
-        <h3>Custom actions</h3>
-        <p>Turn any prompt into a named action with a label. It shows up in the action list automatically.</p>
-      </div>
-      <div class="feat">
-        <div class="ftag">Organisation</div>
-        <h3>Favourites and reorder</h3>
-        <p>Star, hide, and drag to sort your action list. Your workflow, your order.</p>
-      </div>
-      <div class="feat">
-        <div class="ftag">Workflow</div>
-        <h3>Auto-copy results</h3>
-        <p>Enable auto-copy and the transformed text lands in your clipboard the moment the model finishes.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Screenshots -->
-<section class="sec-white" id="screenshots">
-  <div class="wrap">
-    <div class="lbl">In action</div>
-    <h2 class="sh">Built for your whole workflow.</h2>
-    <p class="sub">Smart content detection shows the right actions for whatever you copied.</p>
-    <div class="screens">
-      <div class="sc">
-        <div class="sc-tag">Text</div>
-        <h3>Text actions</h3>
-        <p>Fix grammar, rewrite tone, translate, summarise, bullet points.</p>
-        <img src="img/screen-actions.png" alt="Text action suggestions in apfel-clip"
-             width="540" height="787" loading="lazy">
-      </div>
-      <div class="sc">
-        <div class="sc-tag">Code</div>
-        <h3>Code actions</h3>
-        <p>Explain, find bugs, add comments, simplify. Switched on automatically when you copy code.</p>
-        <img src="img/screen-code.png" alt="Code action suggestions in apfel-clip"
-             width="540" height="787" loading="lazy">
-      </div>
-      <div class="sc">
-        <div class="sc-tag">Results</div>
-        <h3>Clean result view</h3>
-        <p>Side-by-side original and result. Edit in place, copy, or run the action again.</p>
-        <img src="img/screen-result.png" alt="Result panel showing transformation output"
-             width="540" height="787" loading="lazy">
-      </div>
-      <div class="sc">
-        <div class="sc-tag">History</div>
-        <h3>Persistent history</h3>
-        <p>Every transformation saved locally. Re-copy or revisit past results without rerunning.</p>
-        <img src="img/screen-history.png" alt="History panel showing past transformations"
-             width="540" height="787" loading="lazy">
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Open Source -->
-<section class="sec-os">
-  <h2>Free and open source.</h2>
-  <p>MIT-licensed. Use it, fork it, ship it. Bug reports, pull requests, and new action ideas all welcome.</p>
-  <div class="os-links">
-    <a class="btn-green" href="https://github.com/Arthur-Ficial/apfel-clip" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="flex-shrink:0"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> Star on GitHub</a>
-    <a class="btn-outline" href="https://github.com/Arthur-Ficial/apfel-clip/issues" target="_blank" rel="noopener">Report an issue</a>
-    <a class="btn-outline" href="https://github.com/Arthur-Ficial/apfel-clip/releases" target="_blank" rel="noopener">Releases</a>
-  </div>
-</section>
-
-<!-- Footer -->
-<footer>
-  <div class="foot-links">
-    <a href="https://github.com/Arthur-Ficial/apfel-clip" target="_blank" rel="noopener">GitHub</a>
-    <a href="https://github.com/Arthur-Ficial/apfel-clip/releases" target="_blank" rel="noopener">Releases</a>
-    <a href="https://github.com/Arthur-Ficial/apfel-clip/issues" target="_blank" rel="noopener">Issues</a>
-    <a href="https://github.com/Arthur-Ficial/apfel" target="_blank" rel="noopener">apfel (AI engine)</a>
-    <a href="https://github.com/Arthur-Ficial/apfel-clip/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
-  </div>
-  <p>Made with care by <a href="https://github.com/Arthur-Ficial">Arthur Ficial</a> - Powered by Apple Intelligence - <a href="https://franzai.com">franzai.com</a></p>
-</footer>
-
-<script>
-// Resolve latest release version, versioned zip URL, and total all-time download count
-fetch('https://api.github.com/repos/Arthur-Ficial/apfel-clip/releases')
-  .then(function(r) { return r.json(); })
-  .then(function(releases) {
-    if (!releases || !releases.length) return;
-    var latest = releases[0];
-    var tag = latest.tag_name; // e.g. "v0.3.2"
-    if (!tag) return;
-    var url = 'https://github.com/Arthur-Ficial/apfel-clip/releases/download/' + tag + '/apfel-clip-' + tag + '-macos-arm64.zip';
-    // Sum download counts for all zip assets across all releases
-    var total = 0;
-    releases.forEach(function(rel) {
-      (rel.assets || []).forEach(function(a) {
-        if (a.name.indexOf('.zip') !== -1) total += (a.download_count || 0);
-      });
-    });
-    var btn = document.getElementById('download-btn');
-    var label = document.getElementById('download-label');
-    if (btn) btn.href = url;
-    var text = 'Download ' + tag + ' (arm64)';
-    if (total > 0) text += '  \u00b7  ' + total.toLocaleString() + '\u00a0downloads';
-    if (label) label.textContent = text;
-  })
-  .catch(function() {}); // silently keep default href on error
-
-document.querySelectorAll('pre').forEach(function(pre) {
-  var wrap = document.createElement('div');
-  wrap.className = 'pre-wrap';
-  pre.parentNode.insertBefore(wrap, pre);
-  wrap.appendChild(pre);
-  var btn = document.createElement('button');
-  btn.className = 'copy-btn';
-  btn.textContent = 'Copy';
-  btn.addEventListener('click', function() {
-    navigator.clipboard.writeText(pre.textContent.trim()).then(function() {
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-    });
-  });
-  wrap.appendChild(btn);
-});
-</script>
 </body>
 </html>
