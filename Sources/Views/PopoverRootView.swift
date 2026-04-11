@@ -483,6 +483,24 @@ struct PopoverRootView: View {
                         }
                     }
                     .toggleStyle(.switch)
+
+                    Divider()
+
+                    Toggle(isOn: Binding(
+                        get: { viewModel.showWelcomeOnNextLaunch },
+                        set: { enabled in
+                            Task { await viewModel.setShowWelcomeOnNextLaunch(enabled) }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Show welcome on next start")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Re-show the welcome screen next time the app launches. Resets automatically after dismissal.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
                 }
             }
 

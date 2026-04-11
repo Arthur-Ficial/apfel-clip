@@ -197,6 +197,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
 
     // MARK: - NSPopoverDelegate
 
+    /// Ensure the welcome sheet is dismissed before the popover closes.
+    /// A SwiftUI .sheet inside an NSPopover creates a child window; if the
+    /// popover closes while the sheet is still presented, that window becomes
+    /// orphaned and captures all future click events, freezing the app.
+    @objc nonisolated func popoverShouldClose(_ popover: NSPopover) -> Bool {
+        MainActor.assumeIsolated {
+            if let vm = viewModel, vm.isWelcomeVisible {
+                // Synchronously hide so the sheet window closes before the
+                // popover window disappears — prevents an orphaned sheet window
+                // that would block all future click events.
+                vm.isWelcomeVisible = false
+                // Persist lastSeenVersion asynchronously (dismissWelcome also
+                // sets isWelcomeVisible=false again — harmless).
+                Task { await vm.dismissWelcome() }
+            }
+        }
+        return true
+    }
+
     @objc nonisolated func popoverDidClose(_ notification: Notification) {
         Task { @MainActor [weak self] in
             self?.viewModel?.returnToPrimaryPanel()

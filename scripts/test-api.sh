@@ -130,6 +130,10 @@ print "── POST /ui/show / hide ──"
 post /ui/show >/dev/null && pass "POST /ui/show responded" || fail "POST /ui/show failed"
 post /ui/hide >/dev/null && pass "POST /ui/hide responded" || fail "POST /ui/hide failed"
 
+# ── Cleanup — leave app in neutral state ─────────────────────────────────────
+post /welcome/dismiss >/dev/null 2>&1 || true
+post /ui/hide >/dev/null 2>&1 || true
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 print ""
 print "==> $PASS passed / $FAIL failed"

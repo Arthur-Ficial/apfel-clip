@@ -630,6 +630,16 @@ final class PopoverViewModel {
         await persistSettings()
     }
 
+    /// "Show welcome on next start" toggle — clears or restores lastSeenVersion.
+    func setShowWelcomeOnNextLaunch(_ enabled: Bool) async {
+        settings.lastSeenVersion = enabled ? "" : currentVersion
+        await persistSettings()
+    }
+
+    var showWelcomeOnNextLaunch: Bool {
+        settings.lastSeenVersion.isEmpty
+    }
+
     /// Silently checks for updates on launch — never sets error state, swallows all failures.
     func checkForUpdateSilentlyOnLaunch() async {
         guard settings.checkForUpdatesOnLaunch, updateState == .idle else { return }
