@@ -93,6 +93,18 @@ struct ClipControlAPITests {
         #expect(json["status"] as? String == "error")
     }
 
+    @Test("GET /update returns update state")
+    func updateRoute() async throws {
+        let (api, _, _, _) = await makeAPI()
+        let response = await api.handle(method: "GET", path: "/update")
+        let json = try parse(response)
+        #expect(json["status"] as? String == "ok")
+        #expect(json["state"] as? String == "idle")
+        #expect(json["current_version"] is String)
+        #expect(json["update_available"] as? Bool == false)
+        #expect(json["install_method"] is String)
+    }
+
     private func parse(_ response: String) throws -> [String: Any] {
         let data = try #require(response.data(using: .utf8))
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])

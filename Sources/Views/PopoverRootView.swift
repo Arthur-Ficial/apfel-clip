@@ -359,8 +359,85 @@ struct PopoverRootView: View {
         }
     }
 
+    // ── About / Update card ──────────────────────────────────────────────────
+
+    @ViewBuilder
+    private var updateActionView: some View {
+        switch viewModel.updateState {
+        case .idle:
+            Button("Check for Update") {
+                Task { await viewModel.checkForUpdate() }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        case .checking:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini)
+                Text("Checking...").font(.caption).foregroundStyle(.secondary)
+            }
+        case .upToDate:
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("You're up to date").font(.caption).foregroundStyle(.secondary)
+                Button("Check Again") {
+                    Task { await viewModel.checkForUpdate() }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+        case .updateAvailable(let version):
+            HStack(spacing: 8) {
+                Text("Version \(version) available").font(.caption.weight(.semibold))
+                Button("Install") {
+                    viewModel.installUpdate()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        case .installing(let version):
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini)
+                Text("Installing \(version)...").font(.caption).foregroundStyle(.secondary)
+            }
+        case .installed(let version):
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("Version \(version) installed").font(.caption.weight(.semibold))
+                Button("Relaunch to Apply") {
+                    viewModel.relaunch()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        case .error(let message):
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                Button("Retry") {
+                    Task { await viewModel.checkForUpdate() }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+        }
+    }
+
     private var settingsPanel: some View {
         VStack(spacing: 14) {
+            SurfaceCard {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("apfel-clip")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Version \(viewModel.currentVersion)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    updateActionView
+                }
+            }
+
             SurfaceCard {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle(isOn: Binding(

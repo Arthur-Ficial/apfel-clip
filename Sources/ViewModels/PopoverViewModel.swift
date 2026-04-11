@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -27,6 +28,7 @@ final class PopoverViewModel {
     var editingSavedActionID: String? = nil
     var serverState: ClipServerState = .starting
     var controlPort: Int?
+    var updateState: UpdateState = .idle
     private var bannerDismissTask: Task<Void, Never>?
 
     init(
@@ -593,6 +595,86 @@ final class PopoverViewModel {
 
     private func catalogRank(of actionID: String) -> Int {
         ClipActionCatalog.all.firstIndex(where: { $0.id == actionID }) ?? .max
+    }
+
+    // ── Update checking ──────────────────────────────────────────────────────
+
+    var currentVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+    }
+
+    var isHomebrewInstall: Bool {
+        FileManager.default.fileExists(atPath: "/opt/homebrew/Caskroom/apfel-clip")
+    }
+
+    static func isVersionNewer(_ candidate: String, than current: String) -> Bool {
+        let cParts = candidate.split(separator: ".").compactMap { Int($0) }
+        let kParts = current.split(separator: ".").compactMap { Int($0) }
+        let maxLen = max(cParts.count, kParts.count)
+        let cPadded = cParts + Array(repeating: 0, count: maxLen - cParts.count)
+        let kPadded = kParts + Array(repeating: 0, count: maxLen - kParts.count)
+        for (c, k) in zip(cPadded, kPadded) {
+            if c > k { return true }
+            if c < k { return false }
+        }
+        return false
+    }
+
+    func checkForUpdate() async {
+        updateState = .checking
+        do {
+            let url = URL(string: "https://api.github.com/repos/Arthur-Ficial/apfel-clip/releases/latest")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tagName = json["tag_name"] as? String else {
+                updateState = .error(message: "Could not parse release info")
+                return
+            }
+            let latestVersion = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+            if Self.isVersionNewer(latestVersion, than: currentVersion) {
+                updateState = .updateAvailable(newVersion: latestVersion)
+            } else {
+                updateState = .upToDate
+            }
+        } catch {
+            updateState = .error(message: error.localizedDescription)
+        }
+    }
+
+    func installUpdate() {
+        guard case .updateAvailable(let version) = updateState else { return }
+        updateState = .installing(newVersion: version)
+        let isHB = isHomebrewInstall
+        Task.detached { [weak self, version, isHB] in
+            if isHB {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/sh")
+                process.arguments = ["-c", "brew upgrade apfel-clip"]
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    await MainActor.run { self?.updateState = .installed(newVersion: version) }
+                } catch {
+                    await MainActor.run { self?.updateState = .error(message: error.localizedDescription) }
+                }
+            } else {
+                await MainActor.run {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/Arthur-Ficial/apfel-clip/releases/latest")!)
+                    self?.updateState = .idle
+                }
+            }
+        }
+    }
+
+    func relaunch() {
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let bundlePath = Bundle.main.bundleURL.path
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", "(while kill -0 \(pid) 2>/dev/null; do sleep 0.1; done; open '\(bundlePath)') &"]
+        try? process.run()
+        Thread.sleep(forTimeInterval: 0.15)
+        exit(0)
     }
 
     private func persistSettings() async {

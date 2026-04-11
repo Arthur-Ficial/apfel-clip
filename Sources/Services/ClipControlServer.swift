@@ -44,6 +44,18 @@ final class ClipControlAPI: @unchecked Sendable {
                 presenter?.hidePopover()
             }
             return ok()
+        case ("GET", "/update"):
+            return await updateStatus()
+        case ("POST", "/update/check"):
+            await viewModel.checkForUpdate()
+            return await updateStatus()
+        case ("POST", "/update/install"):
+            await MainActor.run { viewModel.installUpdate() }
+            return await updateStatus()
+        case ("POST", "/update/relaunch"):
+            let response = await updateStatus()
+            Task { @MainActor in viewModel.relaunch() }
+            return response
         default:
             return err("Unknown route.")
         }
@@ -65,6 +77,10 @@ final class ClipControlAPI: @unchecked Sendable {
                 "POST /settings",
                 "POST /ui/show",
                 "POST /ui/hide",
+                "GET  /update",
+                "POST /update/check",
+                "POST /update/install",
+                "POST /update/relaunch",
             ],
         ])
     }
@@ -216,6 +232,39 @@ final class ClipControlAPI: @unchecked Sendable {
             await viewModel.updateLaunchAtLogin(launchAtLogin)
         }
         return await settings()
+    }
+
+    private func updateStatus() async -> String {
+        await MainActor.run { () -> String in
+            let state = viewModel.updateState
+            var payload: [String: Any] = [
+                "current_version": viewModel.currentVersion,
+                "install_method": viewModel.isHomebrewInstall ? "homebrew" : "direct",
+                "update_available": false,
+            ]
+            switch state {
+            case .idle:
+                payload["state"] = "idle"
+            case .checking:
+                payload["state"] = "checking"
+            case .upToDate:
+                payload["state"] = "up_to_date"
+            case .updateAvailable(let version):
+                payload["state"] = "update_available"
+                payload["latest_version"] = version
+                payload["update_available"] = true
+            case .installing(let version):
+                payload["state"] = "installing"
+                payload["latest_version"] = version
+            case .installed(let version):
+                payload["state"] = "installed"
+                payload["latest_version"] = version
+            case .error(let message):
+                payload["state"] = "error"
+                payload["message"] = message
+            }
+            return ok(payload)
+        }
     }
 
     private func serverStatePayload(_ state: ClipServerState) -> [String: Any] {
