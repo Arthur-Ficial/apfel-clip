@@ -80,8 +80,9 @@ if HELPER_PATH="$(resolve_helper 2>/dev/null)"; then
   cp "$HELPER_PATH" "$APP_BUNDLE/Contents/Helpers/apfel"
   chmod +x "$APP_BUNDLE/Contents/Helpers/apfel"
 else
-  print "==> Warning: no apfel helper was found; packaged app will require apfel on PATH"
-  rmdir "$APP_BUNDLE/Contents/Helpers" 2>/dev/null || true
+  print "==> ERROR: apfel helper not found on this build host." >&2
+  print "==> Every GUI release must ship with all dependencies bundled. Install apfel (brew install apfel) or set APFEL_HELPER_PATH and rerun." >&2
+  exit 1
 fi
 
 print "==> Signing bundle (${SIGN_IDENTITY})"
