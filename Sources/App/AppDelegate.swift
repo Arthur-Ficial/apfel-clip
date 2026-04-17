@@ -31,7 +31,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         // Popover is created only after settings are loaded — so the first time the
         // user opens it, their saved actions and preferences are already present.
         configureStatusItem()
-        configureHotkey()
 
         Task {
             await bootstrap(viewModel: viewModel)
@@ -101,6 +100,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
         // Load settings and history FIRST — popover is created after this so the
         // UI is never shown in an empty-defaults state.
         await viewModel.loadPersistedState()
+        configureHotkey()
+        viewModel.onHotkeyChanged = { [weak self] config in
+            self?.reconfigureHotkey(config)
+        }
         if CommandLine.arguments.contains("--simulate-first-run") {
             await viewModel.debugResetFirstRun()
         } else {
@@ -166,9 +169,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
     }
 
     private func configureHotkey() {
+        let config = viewModel?.settings.hotkey ?? HotkeyConfig()
+        registerHotkey(config)
+    }
+
+    func reconfigureHotkey(_ config: HotkeyConfig) {
+        if let monitor = globalMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMonitor = nil
+        }
+        registerHotkey(config)
+    }
+
+    private func registerHotkey(_ config: HotkeyConfig) {
+        let expectedFlags = config.nsModifierFlags
+        let expectedKey = config.key.lowercased()
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.modifierFlags.contains([.command, .shift]),
-                  event.charactersIgnoringModifiers == "v" else { return }
+            let pressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard pressed.contains(expectedFlags),
+                  event.charactersIgnoringModifiers?.lowercased() == expectedKey else { return }
             Task { @MainActor in
                 self?.togglePopover(nil)
             }

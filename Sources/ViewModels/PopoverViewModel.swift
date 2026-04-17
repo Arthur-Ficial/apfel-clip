@@ -31,6 +31,7 @@ final class PopoverViewModel {
     var updateState: UpdateState = .idle
     var isWelcomeVisible: Bool = false
     private var bannerDismissTask: Task<Void, Never>?
+    var onHotkeyChanged: ((HotkeyConfig) -> Void)?
 
     init(
         actionExecutor: any ClipActionExecuting,
@@ -165,7 +166,7 @@ final class PopoverViewModel {
     /// (no history) and the clipboard is currently empty. Safe to call on every launch.
     func seedWelcomeClipboardIfNeeded() {
         guard history.isEmpty && clipboardText.isEmpty else { return }
-        setClipboardText("apfel-clip example — Copy any text, code, or error message. Press \u{2318}\u{21E7}V and pick an action: Fix Grammar, Summarise, Explain Code, and more. On-device AI, no API keys needed.")
+        setClipboardText("apfel-clip example - Copy any text, code, or error message. Press \(settings.hotkey.displayLabel) and pick an action: Fix Grammar, Summarise, Explain Code, and more. On-device AI, no API keys needed.")
     }
 
     func selectPrimaryPanel(_ panel: ClipPrimaryPanel) async {
@@ -404,6 +405,16 @@ final class PopoverViewModel {
     func updateAutoCopy(_ enabled: Bool) async {
         settings.autoCopy = enabled
         await persistSettings()
+    }
+
+    var hotkeyDisplayLabel: String {
+        settings.hotkey.displayLabel
+    }
+
+    func updateHotkey(_ config: HotkeyConfig) async {
+        settings.hotkey = config
+        await persistSettings()
+        onHotkeyChanged?(config)
     }
 
     func updateLaunchAtLogin(_ enabled: Bool) async {

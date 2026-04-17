@@ -86,7 +86,7 @@ struct PopoverRootView: View {
                     .controlSize(.small)
                 } else {
                     HStack(spacing: 10) {
-                        Label("⌘⇧V", systemImage: "keyboard")
+                        Label(viewModel.hotkeyDisplayLabel, systemImage: "keyboard")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
                         Button {
@@ -524,6 +524,27 @@ struct PopoverRootView: View {
                         }
                     }
                     .toggleStyle(.switch)
+                }
+            }
+
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Global shortcut")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Press to set a new keyboard shortcut for toggling apfel-clip.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        HotkeyRecorderView(config: Binding(
+                            get: { viewModel.settings.hotkey },
+                            set: { newConfig in
+                                Task { await viewModel.updateHotkey(newConfig) }
+                            }
+                        ))
+                    }
                 }
             }
 
