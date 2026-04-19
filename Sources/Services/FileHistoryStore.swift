@@ -1,10 +1,12 @@
 import Foundation
 
 actor FileHistoryStore: ClipHistoryStoring {
+    static let defaultMaxEntries = 40
+
     private let url: URL
     private let maxEntries: Int
 
-    init(url: URL = FileHistoryStore.defaultURL(), maxEntries: Int = 50) {
+    init(url: URL = FileHistoryStore.defaultURL(), maxEntries: Int = FileHistoryStore.defaultMaxEntries) {
         self.url = url
         self.maxEntries = maxEntries
     }

@@ -317,10 +317,24 @@ final class PopoverViewModel {
         }
     }
 
+    func removeHistoryEntry(_ id: String) async {
+        let filteredHistory = history.filter { $0.id != id }
+        guard filteredHistory.count != history.count else { return }
+        history = filteredHistory
+        try? await historyStore.save(filteredHistory)
+    }
+
     func clearClipboardHistory() async {
         clipboardHistory = []
         try? await clipboardHistoryStore.save([], limit: clipboardHistoryLimit)
         showBanner(ClipBanner(style: .info, title: "Clipboard history cleared", detail: nil, autoDismiss: true))
+    }
+
+    func removeClipboardHistoryEntry(_ id: String) async {
+        let filteredHistory = clipboardHistory.filter { $0.id != id }
+        guard filteredHistory.count != clipboardHistory.count else { return }
+        clipboardHistory = filteredHistory
+        try? await clipboardHistoryStore.save(filteredHistory, limit: clipboardHistoryLimit)
     }
 
     func copyClipboardHistoryEntry(_ entry: ClipboardHistoryEntry) {
@@ -615,7 +629,7 @@ final class PopoverViewModel {
             output: trimmedOutput
         )
         history.insert(entry, at: 0)
-        history = Array(history.prefix(50))
+        history = Array(history.prefix(FileHistoryStore.defaultMaxEntries))
         try? await historyStore.save(history)
 
         if shouldCopy {

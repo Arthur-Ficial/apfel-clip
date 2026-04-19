@@ -69,6 +69,34 @@ struct PopoverViewModelTests {
         #expect(saved.count == 1)
     }
 
+    @Test("Running an action keeps only the latest 40 transformation items")
+    func runActionTruncatesTransformationHistoryToForty() async throws {
+        let (viewModel, executor, clipboard, historyStore, _, _, _) = makeViewModel()
+        let existingEntries = (0..<FileHistoryStore.defaultMaxEntries).map { index in
+            ClipHistoryEntry(
+                actionID: "existing-\(index)",
+                actionName: "Existing \(index)",
+                input: "input-\(index)",
+                output: "output-\(index)"
+            )
+        }
+        try await historyStore.save(existingEntries)
+        await viewModel.loadPersistedState()
+
+        await executor.setNextResult("Newest output")
+        clipboard.currentText = "new input"
+        viewModel.refreshFromClipboard()
+
+        _ = try await viewModel.runAction(id: "fix-grammar")
+
+        #expect(viewModel.history.count == FileHistoryStore.defaultMaxEntries)
+        #expect(viewModel.history.first?.output == "Newest output")
+        #expect(viewModel.history.last?.actionID == "existing-38")
+        let stored = try await historyStore.load()
+        #expect(stored.count == FileHistoryStore.defaultMaxEntries)
+        #expect(stored.first?.output == "Newest output")
+    }
+
     @Test("Running an action auto-copies when autoCopy is enabled")
     func runActionAutoCopiesToClipboard() async throws {
         let (viewModel, executor, clipboard, _, _, settingsStore, _) = makeViewModel()
@@ -149,6 +177,35 @@ struct PopoverViewModelTests {
         #expect(clipboard.setTextCalls.isEmpty) // must NOT auto-copy on history open
     }
 
+    @Test("Removing a transformation history item updates memory and persistence")
+    func removeHistoryEntry() async throws {
+        let (viewModel, _, _, historyStore, _, _, _) = makeViewModel()
+        let first = ClipHistoryEntry(actionID: "fix-grammar", actionName: "Fix grammar", input: "teh", output: "the")
+        let second = ClipHistoryEntry(actionID: "summarize", actionName: "Summarize", input: "Long", output: "Short")
+        try await historyStore.save([first, second])
+
+        await viewModel.loadPersistedState()
+        await viewModel.removeHistoryEntry(first.id)
+
+        #expect(viewModel.history.map(\.id) == [second.id])
+        let stored = try await historyStore.load()
+        #expect(stored.map(\.id) == [second.id])
+    }
+
+    @Test("Removing an unknown transformation history item is a no-op")
+    func removeUnknownHistoryEntry() async throws {
+        let (viewModel, _, _, historyStore, _, _, _) = makeViewModel()
+        let entry = ClipHistoryEntry(actionID: "fix-grammar", actionName: "Fix grammar", input: "teh", output: "the")
+        try await historyStore.save([entry])
+
+        await viewModel.loadPersistedState()
+        await viewModel.removeHistoryEntry("missing")
+
+        #expect(viewModel.history.map(\.id) == [entry.id])
+        let stored = try await historyStore.load()
+        #expect(stored.map(\.id) == [entry.id])
+    }
+
     @Test("Launch at login defaults on and can be changed")
     func launchAtLoginSetting() async {
         let (viewModel, _, _, _, _, settingsStore, launchAtLoginController) = makeViewModel()
@@ -221,6 +278,35 @@ struct PopoverViewModelTests {
 
         let stored = try await clipboardHistoryStore.load(limit: 40)
         #expect(stored.count == 1)
+    }
+
+    @Test("Removing a clipboard history item updates total and persistence")
+    func removeClipboardHistoryEntry() async throws {
+        let (viewModel, _, _, _, clipboardHistoryStore, _, _) = makeViewModel()
+        let first = ClipboardHistoryEntry(text: "one", contentType: .text)
+        let second = ClipboardHistoryEntry(text: "two", contentType: .code)
+        try await clipboardHistoryStore.save([first, second], limit: 40)
+
+        await viewModel.loadPersistedState()
+        await viewModel.removeClipboardHistoryEntry(first.id)
+
+        #expect(viewModel.clipboardHistory.map(\.id) == [second.id])
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.map(\.id) == [second.id])
+    }
+
+    @Test("Removing an unknown clipboard history item is a no-op")
+    func removeUnknownClipboardHistoryEntry() async throws {
+        let (viewModel, _, _, _, clipboardHistoryStore, _, _) = makeViewModel()
+        let entry = ClipboardHistoryEntry(text: "one", contentType: .text)
+        try await clipboardHistoryStore.save([entry], limit: 40)
+
+        await viewModel.loadPersistedState()
+        await viewModel.removeClipboardHistoryEntry("missing")
+
+        #expect(viewModel.clipboardHistory.map(\.id) == [entry.id])
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.map(\.id) == [entry.id])
     }
 
     @Test("Clipboard history limit truncates stored external copies")

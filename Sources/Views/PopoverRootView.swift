@@ -322,7 +322,7 @@ struct PopoverRootView: View {
 
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(viewModel.selectedHistorySection == .transformations ? "Recent transformations" : "Clipboard manager")
+                            Text(viewModel.selectedHistorySection == .transformations ? "Transformations manager" : "Clipboard manager")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                             Text(historySubtitle)
                                 .font(.caption)
@@ -357,37 +357,7 @@ struct PopoverRootView: View {
                         ScrollView {
                             VStack(spacing: 8) {
                                 ForEach(viewModel.history) { entry in
-                                    let isHoveredEntry = hoveredHistoryID == entry.id
-                                    Button {
-                                        viewModel.openHistoryEntry(entry)
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            HStack {
-                                                Text(entry.actionName)
-                                                    .font(.subheadline.weight(.semibold))
-                                                Spacer()
-                                                Text(entry.timestamp, format: .dateTime.hour().minute().second())
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            Text(entry.output)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(3)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 10)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
-                                                .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                    .onHover { hovered in
-                                        hoveredHistoryID = hovered ? entry.id : nil
-                                    }
+                                    historyTransformationRow(entry)
                                 }
                             }
                         }
@@ -403,41 +373,7 @@ struct PopoverRootView: View {
                         ScrollView {
                             VStack(spacing: 8) {
                                 ForEach(viewModel.clipboardHistory) { entry in
-                                    let isHoveredEntry = hoveredClipboardHistoryID == entry.id
-                                    Button {
-                                        viewModel.copyClipboardHistoryEntry(entry)
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            HStack(alignment: .firstTextBaseline) {
-                                                Label(entry.contentType.rawValue, systemImage: entry.contentType.icon)
-                                                    .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
-                                                Spacer()
-                                                Text(entry.timestamp, format: .dateTime.hour().minute().second())
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            Text(entry.text)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(3)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                            Text("Click to copy back into the clipboard")
-                                                .font(.caption2)
-                                                .foregroundStyle(.tertiary)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 10)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
-                                                .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                    .onHover { hovered in
-                                        hoveredClipboardHistoryID = hovered ? entry.id : nil
-                                    }
+                                    clipboardHistoryRow(entry)
                                 }
                             }
                         }
@@ -445,6 +381,108 @@ struct PopoverRootView: View {
                 }
             }
         }
+    }
+
+    private func historyTransformationRow(_ entry: ClipHistoryEntry) -> some View {
+        let isHoveredEntry = hoveredHistoryID == entry.id
+
+        return HStack(spacing: 10) {
+            Button {
+                viewModel.openHistoryEntry(entry)
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(entry.actionName)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(entry.timestamp, format: .dateTime.hour().minute().second())
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(entry.output)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+
+            historyDeleteButton {
+                Task { await viewModel.removeHistoryEntry(entry.id) }
+            }
+            .opacity(isHoveredEntry ? 1 : 0.68)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
+                .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
+        )
+        .onHover { hovered in
+            hoveredHistoryID = hovered ? entry.id : nil
+        }
+    }
+
+    private func clipboardHistoryRow(_ entry: ClipboardHistoryEntry) -> some View {
+        let isHoveredEntry = hoveredClipboardHistoryID == entry.id
+
+        return HStack(spacing: 10) {
+            Button {
+                viewModel.copyClipboardHistoryEntry(entry)
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Label(entry.contentType.rawValue, systemImage: entry.contentType.icon)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                        Spacer()
+                        Text(entry.timestamp, format: .dateTime.hour().minute().second())
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(entry.text)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Click to copy back into the clipboard")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+
+            historyDeleteButton {
+                Task { await viewModel.removeClipboardHistoryEntry(entry.id) }
+            }
+            .opacity(isHoveredEntry ? 1 : 0.68)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
+                .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
+        )
+        .onHover { hovered in
+            hoveredClipboardHistoryID = hovered ? entry.id : nil
+        }
+    }
+
+    private func historyDeleteButton(action: @escaping () -> Void) -> some View {
+        Button(role: .destructive, action: action) {
+            Image(systemName: "trash")
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.red)
+        .contentShape(Rectangle())
+        .help("Remove item")
     }
 
     // ── About / Update card ──────────────────────────────────────────────────
@@ -594,7 +632,7 @@ struct PopoverRootView: View {
                         }
                     ), in: ClipSettings.clipboardHistoryLimitRange) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Clipboard history limit")
+                            Text("History limit")
                                 .font(.subheadline.weight(.semibold))
                             Text("Stores up to \(viewModel.clipboardHistoryLimit) copied items from outside the app.")
                                 .font(.caption)
@@ -1259,7 +1297,7 @@ struct PopoverRootView: View {
     private var historySubtitle: String {
         switch viewModel.selectedHistorySection {
         case .transformations:
-            return "\(viewModel.history.count) saved locally"
+            return "\(viewModel.history.count) of \(viewModel.clipboardHistoryLimit) saved locally"
         case .clipboard:
             return "\(viewModel.clipboardHistory.count) of \(viewModel.clipboardHistoryLimit) saved locally"
         }

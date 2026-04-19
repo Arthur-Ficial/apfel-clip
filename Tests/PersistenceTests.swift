@@ -21,6 +21,27 @@ struct PersistenceTests {
         #expect(loaded[1].output == "Short")
     }
 
+    @Test("FileHistoryStore keeps only the latest 40 entries")
+    func historyStoreTruncatesToFortyEntries() async throws {
+        let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = FileHistoryStore(url: tempDirectory.appendingPathComponent("history.json"))
+        let entries = (0..<45).map { index in
+            ClipHistoryEntry(
+                actionID: "action-\(index)",
+                actionName: "Action \(index)",
+                input: "input-\(index)",
+                output: "output-\(index)"
+            )
+        }
+
+        try await store.save(entries)
+        let loaded = try await store.load()
+
+        #expect(loaded.count == FileHistoryStore.defaultMaxEntries)
+        #expect(loaded.first?.actionID == "action-0")
+        #expect(loaded.last?.actionID == "action-39")
+    }
+
     @Test("FileClipboardHistoryStore round-trips entries with limit")
     func clipboardHistoryRoundTrip() async throws {
         let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
