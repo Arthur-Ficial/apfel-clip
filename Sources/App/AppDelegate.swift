@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
     private let clipboardService = PasteboardClipboardService()
     private let actionExecutor = ConfigurableClipActionExecutor()
     private let historyStore = FileHistoryStore()
+    private let clipboardHistoryStore = FileClipboardHistoryStore()
     private let settingsStore = UserDefaultsSettingsStore()
     private let launchAtLoginController = SystemLaunchAtLoginController()
     private let serverManager = ServerManager()
@@ -22,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, Pop
             actionExecutor: actionExecutor,
             clipboardService: clipboardService,
             historyStore: historyStore,
+            clipboardHistoryStore: clipboardHistoryStore,
             settingsStore: settingsStore,
             launchAtLoginController: launchAtLoginController
         )

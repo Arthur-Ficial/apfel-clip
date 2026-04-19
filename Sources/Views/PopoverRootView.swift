@@ -4,6 +4,7 @@ struct PopoverRootView: View {
     @Bindable var viewModel: PopoverViewModel
     @State private var hoveredActionID: String?
     @State private var hoveredHistoryID: String?
+    @State private var hoveredClipboardHistoryID: String?
     @State private var hoveredRecentPromptID: String?
     @State private var dropTargetID: String?
 
@@ -299,65 +300,144 @@ struct PopoverRootView: View {
     private var historyPanel: some View {
         VStack(spacing: 14) {
             SurfaceCard {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Recent transformations")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        Text("\(viewModel.history.count) saved locally")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        ForEach(ClipHistorySection.allCases) { section in
+                            Button {
+                                viewModel.selectedHistorySection = section
+                            } label: {
+                                Text(section.title)
+                                    .font(.caption.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 9)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(viewModel.selectedHistorySection == section ? Color(red: 0.16, green: 0.49, blue: 0.22) : Color.white.opacity(0.75))
+                                    )
+                                    .foregroundStyle(viewModel.selectedHistorySection == section ? .white : .primary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    Spacer()
-                    Button("Clear") {
-                        Task { await viewModel.clearHistory() }
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(viewModel.selectedHistorySection == .transformations ? "Recent transformations" : "Clipboard manager")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            Text(historySubtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Clear") {
+                            Task {
+                                if viewModel.selectedHistorySection == .transformations {
+                                    await viewModel.clearHistory()
+                                } else {
+                                    await viewModel.clearClipboardHistory()
+                                }
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(selectedHistoryIsEmpty)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(viewModel.history.isEmpty)
                 }
             }
 
             SurfaceCard(fillAvailableHeight: true) {
-                if viewModel.history.isEmpty {
-                    emptyHint(
-                        icon: "clock.arrow.circlepath",
-                        title: "No history yet",
-                        detail: "Successful actions are stored here so you can reopen or re-copy them."
-                    )
-                } else {
-                    ScrollView {
-                        VStack(spacing: 8) {
-                            ForEach(viewModel.history) { entry in
-                                let isHoveredEntry = hoveredHistoryID == entry.id
-                                Button {
-                                    viewModel.openHistoryEntry(entry)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Text(entry.actionName)
-                                                .font(.subheadline.weight(.semibold))
-                                            Spacer()
-                                            Text(entry.timestamp, format: .dateTime.hour().minute().second())
-                                                .font(.caption2)
+                if viewModel.selectedHistorySection == .transformations {
+                    if viewModel.history.isEmpty {
+                        emptyHint(
+                            icon: "clock.arrow.circlepath",
+                            title: "No history yet",
+                            detail: "Successful actions are stored here so you can reopen or re-copy them."
+                        )
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                ForEach(viewModel.history) { entry in
+                                    let isHoveredEntry = hoveredHistoryID == entry.id
+                                    Button {
+                                        viewModel.openHistoryEntry(entry)
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack {
+                                                Text(entry.actionName)
+                                                    .font(.subheadline.weight(.semibold))
+                                                Spacer()
+                                                Text(entry.timestamp, format: .dateTime.hour().minute().second())
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Text(entry.output)
+                                                .font(.caption)
                                                 .foregroundStyle(.secondary)
+                                                .lineLimit(3)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
                                         }
-                                        Text(entry.output)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(3)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
+                                                .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
+                                        )
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
-                                            .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
-                                    )
+                                    .buttonStyle(.plain)
+                                    .onHover { hovered in
+                                        hoveredHistoryID = hovered ? entry.id : nil
+                                    }
                                 }
-                                .buttonStyle(.plain)
-                                .onHover { hovered in
-                                    hoveredHistoryID = hovered ? entry.id : nil
+                            }
+                        }
+                    }
+                } else {
+                    if viewModel.clipboardHistory.isEmpty {
+                        emptyHint(
+                            icon: "doc.on.clipboard",
+                            title: "No clipboard items yet",
+                            detail: "External copies are stored here so you can revisit everything copied outside the app."
+                        )
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                ForEach(viewModel.clipboardHistory) { entry in
+                                    let isHoveredEntry = hoveredClipboardHistoryID == entry.id
+                                    Button {
+                                        viewModel.copyClipboardHistoryEntry(entry)
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack(alignment: .firstTextBaseline) {
+                                                Label(entry.contentType.rawValue, systemImage: entry.contentType.icon)
+                                                    .font(.caption.weight(.semibold))
+                                                    .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                                                Spacer()
+                                                Text(entry.timestamp, format: .dateTime.hour().minute().second())
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Text(entry.text)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(3)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                            Text("Click to copy back into the clipboard")
+                                                .font(.caption2)
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .fill(isHoveredEntry ? Color.white : Color.white.opacity(0.8))
+                                                .animation(.easeInOut(duration: 0.1), value: isHoveredEntry)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .onHover { hovered in
+                                        hoveredClipboardHistoryID = hovered ? entry.id : nil
+                                    }
                                 }
                             }
                         }
@@ -502,6 +582,25 @@ struct PopoverRootView: View {
                         }
                     }
                     .toggleStyle(.switch)
+
+                    Divider()
+
+                    Stepper(value: Binding(
+                        get: { viewModel.clipboardHistoryLimit },
+                        set: { newValue in
+                            Task {
+                                await viewModel.updateClipboardHistoryLimit(newValue)
+                            }
+                        }
+                    ), in: ClipSettings.clipboardHistoryLimitRange) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Clipboard history limit")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Stores up to \(viewModel.clipboardHistoryLimit) copied items from outside the app.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 
@@ -1155,6 +1254,24 @@ struct PopoverRootView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.white.opacity(0.82))
         )
+    }
+
+    private var historySubtitle: String {
+        switch viewModel.selectedHistorySection {
+        case .transformations:
+            return "\(viewModel.history.count) saved locally"
+        case .clipboard:
+            return "\(viewModel.clipboardHistory.count) of \(viewModel.clipboardHistoryLimit) saved locally"
+        }
+    }
+
+    private var selectedHistoryIsEmpty: Bool {
+        switch viewModel.selectedHistorySection {
+        case .transformations:
+            return viewModel.history.isEmpty
+        case .clipboard:
+            return viewModel.clipboardHistory.isEmpty
+        }
     }
 
     private func emptyHint(icon: String, title: String, detail: String) -> some View {

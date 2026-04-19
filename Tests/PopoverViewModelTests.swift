@@ -10,30 +10,36 @@ struct PopoverViewModelTests {
         MockActionExecutor,
         MockClipboardService,
         MockHistoryStore,
+        MockClipboardHistoryStore,
         MockSettingsStore,
         MockLaunchAtLoginController
     ) {
         let executor = MockActionExecutor()
         let clipboard = MockClipboardService()
         let historyStore = MockHistoryStore()
+        let clipboardHistoryStore = MockClipboardHistoryStore()
         let settingsStore = MockSettingsStore()
         let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
+            clipboardHistoryStore: clipboardHistoryStore,
             settingsStore: settingsStore,
             launchAtLoginController: launchAtLoginController
         )
-        return (viewModel, executor, clipboard, historyStore, settingsStore, launchAtLoginController)
+        return (viewModel, executor, clipboard, historyStore, clipboardHistoryStore, settingsStore, launchAtLoginController)
     }
 
     @Test("Loads persisted settings and history")
     func loadPersistedState() async throws {
-        let (viewModel, _, _, historyStore, settingsStore, _) = makeViewModel()
+        let (viewModel, _, _, historyStore, clipboardHistoryStore, settingsStore, _) = makeViewModel()
         try await historyStore.save([
             ClipHistoryEntry(actionID: "fix-grammar", actionName: "Fix grammar", input: "teh", output: "the")
         ])
+        try await clipboardHistoryStore.save([
+            ClipboardHistoryEntry(text: "copied", contentType: .text)
+        ], limit: 40)
         await settingsStore.save(
             ClipSettings(autoCopy: false, recentCustomPrompts: ["haiku"], preferredPanel: .history)
         )
@@ -41,13 +47,14 @@ struct PopoverViewModelTests {
         await viewModel.loadPersistedState()
 
         #expect(viewModel.history.count == 1)
+        #expect(viewModel.clipboardHistory.count == 1)
         #expect(viewModel.settings.autoCopy == false)
         #expect(viewModel.screen == .history)
     }
 
     @Test("Running an action stores a result without auto-copying by default")
     func runActionSuccess() async throws {
-        let (viewModel, executor, clipboard, historyStore, _, _) = makeViewModel()
+        let (viewModel, executor, clipboard, historyStore, _, _, _) = makeViewModel()
         await executor.setNextResult("Fixed text")
         clipboard.currentText = "teh text"
         viewModel.refreshFromClipboard()
@@ -64,7 +71,7 @@ struct PopoverViewModelTests {
 
     @Test("Running an action auto-copies when autoCopy is enabled")
     func runActionAutoCopiesToClipboard() async throws {
-        let (viewModel, executor, clipboard, _, settingsStore, _) = makeViewModel()
+        let (viewModel, executor, clipboard, _, _, settingsStore, _) = makeViewModel()
         await settingsStore.save(ClipSettings(autoCopy: true))
         await viewModel.loadPersistedState()
         await executor.setNextResult("Fixed text")
@@ -78,7 +85,7 @@ struct PopoverViewModelTests {
 
     @Test("Failed action leaves error banner")
     func runActionFailure() async throws {
-        let (viewModel, executor, clipboard, _, _, _) = makeViewModel()
+        let (viewModel, executor, clipboard, _, _, _, _) = makeViewModel()
         await executor.setNextError(ClipServiceError.serverError("Boom"))
         clipboard.currentText = "teh text"
         viewModel.refreshFromClipboard()
@@ -93,7 +100,7 @@ struct PopoverViewModelTests {
 
     @Test("Custom prompt stores prompt in recents")
     func customPromptRecents() async throws {
-        let (viewModel, executor, clipboard, _, settingsStore, _) = makeViewModel()
+        let (viewModel, executor, clipboard, _, _, settingsStore, _) = makeViewModel()
         await executor.setNextResult("Pirate text")
         clipboard.currentText = "hello"
         viewModel.refreshFromClipboard()
@@ -109,7 +116,7 @@ struct PopoverViewModelTests {
 
     @Test("Action manager favorites and hides actions")
     func actionManager() async throws {
-        let (viewModel, _, _, _, settingsStore, _) = makeViewModel()
+        let (viewModel, _, _, _, _, settingsStore, _) = makeViewModel()
 
         await viewModel.toggleFavorite("fix-grammar")
         await viewModel.toggleHidden("translate-ja")
@@ -126,7 +133,7 @@ struct PopoverViewModelTests {
 
     @Test("Opening history entry shows result without copying to clipboard")
     func openHistoryEntry() {
-        let (viewModel, _, clipboard, _, _, _) = makeViewModel()
+        let (viewModel, _, clipboard, _, _, _, _) = makeViewModel()
         let entry = ClipHistoryEntry(
             actionID: "summarize",
             actionName: "Summarize",
@@ -144,7 +151,7 @@ struct PopoverViewModelTests {
 
     @Test("Launch at login defaults on and can be changed")
     func launchAtLoginSetting() async {
-        let (viewModel, _, _, _, settingsStore, launchAtLoginController) = makeViewModel()
+        let (viewModel, _, _, _, _, settingsStore, launchAtLoginController) = makeViewModel()
 
         await viewModel.loadPersistedState()
         #expect(viewModel.settings.launchAtLoginEnabled == true)
@@ -163,7 +170,7 @@ struct PopoverViewModelTests {
 
     @Test("seedWelcomeClipboardIfNeeded seeds example text when history and clipboard are empty")
     func seedWelcomeClipboardWhenEmpty() {
-        let (viewModel, _, clipboard, _, _, _) = makeViewModel()
+        let (viewModel, _, clipboard, _, _, _, _) = makeViewModel()
         // No history loaded, clipboard is empty — fresh install.
         viewModel.seedWelcomeClipboardIfNeeded()
 
@@ -174,7 +181,7 @@ struct PopoverViewModelTests {
 
     @Test("seedWelcomeClipboardIfNeeded does nothing when clipboard already has text")
     func seedWelcomeClipboardSkipsWhenClipboardHasContent() {
-        let (viewModel, _, clipboard, _, _, _) = makeViewModel()
+        let (viewModel, _, clipboard, _, _, _, _) = makeViewModel()
         clipboard.currentText = "some existing text"
         viewModel.refreshFromClipboard()
 
@@ -186,7 +193,7 @@ struct PopoverViewModelTests {
 
     @Test("seedWelcomeClipboardIfNeeded does nothing when history exists")
     func seedWelcomeClipboardSkipsWhenHistoryExists() async throws {
-        let (viewModel, _, clipboard, historyStore, _, _) = makeViewModel()
+        let (viewModel, _, clipboard, historyStore, _, _, _) = makeViewModel()
         try await historyStore.save([
             ClipHistoryEntry(actionID: "fix-grammar", actionName: "Fix grammar", input: "old", output: "new")
         ])
@@ -196,5 +203,65 @@ struct PopoverViewModelTests {
         viewModel.seedWelcomeClipboardIfNeeded()
 
         #expect(clipboard.setTextCalls.isEmpty)
+    }
+
+    @Test("External clipboard changes are stored separately and deduplicated")
+    func externalClipboardHistoryCapture() async throws {
+        let (viewModel, _, clipboard, _, clipboardHistoryStore, _, _) = makeViewModel()
+        viewModel.attachClipboardListener()
+
+        clipboard.currentText = "first external copy"
+        clipboard.refreshNow()
+        await Task.yield()
+        clipboard.refreshNow()
+        await Task.yield()
+
+        #expect(viewModel.clipboardHistory.count == 1)
+        #expect(viewModel.clipboardHistory.first?.text == "first external copy")
+
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.count == 1)
+    }
+
+    @Test("Clipboard history limit truncates stored external copies")
+    func clipboardHistoryLimitTruncates() async throws {
+        let (viewModel, _, clipboard, _, clipboardHistoryStore, settingsStore, _) = makeViewModel()
+        await settingsStore.save(ClipSettings(clipboardHistoryLimit: 2))
+        await viewModel.loadPersistedState()
+        viewModel.attachClipboardListener()
+
+        clipboard.currentText = "one"
+        clipboard.refreshNow()
+        await Task.yield()
+        clipboard.currentText = "two"
+        clipboard.refreshNow()
+        await Task.yield()
+        clipboard.currentText = "three"
+        clipboard.refreshNow()
+        await Task.yield()
+
+        #expect(viewModel.clipboardHistory.map(\.text) == ["three", "two"])
+
+        let stored = try await clipboardHistoryStore.load(limit: 2)
+        #expect(stored.map(\.text) == ["three", "two"])
+    }
+
+    @Test("Updating clipboard history limit persists and trims existing items")
+    func updateClipboardHistoryLimit() async throws {
+        let (viewModel, _, _, _, clipboardHistoryStore, settingsStore, _) = makeViewModel()
+        try await clipboardHistoryStore.save([
+            ClipboardHistoryEntry(text: "one", contentType: .text),
+            ClipboardHistoryEntry(text: "two", contentType: .text),
+            ClipboardHistoryEntry(text: "three", contentType: .text),
+        ], limit: 40)
+        await viewModel.loadPersistedState()
+
+        await viewModel.updateClipboardHistoryLimit(2)
+
+        #expect(viewModel.clipboardHistory.count == 2)
+        let loadedSettings = await settingsStore.load()
+        #expect(loadedSettings.clipboardHistoryLimit == 2)
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.count == 2)
     }
 }

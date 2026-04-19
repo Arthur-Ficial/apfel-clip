@@ -11,12 +11,14 @@ struct ClipControlAPITests {
         let clipboard = MockClipboardService()
         clipboard.currentText = "original"
         let historyStore = MockHistoryStore()
+        let clipboardHistoryStore = MockClipboardHistoryStore()
         let settingsStore = MockSettingsStore()
         let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
+            clipboardHistoryStore: clipboardHistoryStore,
             settingsStore: settingsStore,
             launchAtLoginController: launchAtLoginController
         )

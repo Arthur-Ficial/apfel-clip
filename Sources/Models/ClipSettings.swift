@@ -95,8 +95,12 @@ struct HotkeyConfig: Codable, Equatable, Hashable, Sendable {
 }
 
 struct ClipSettings: Codable, Equatable, Sendable {
+    static let clipboardHistoryLimitRange = 1...40
+    static let defaultClipboardHistoryLimit = 40
+
     var hotkey: HotkeyConfig = HotkeyConfig()
     var autoCopy: Bool = false
+    var clipboardHistoryLimit: Int = ClipSettings.defaultClipboardHistoryLimit
     var launchAtLoginEnabled: Bool = true
     var launchAtLoginPromptShown: Bool = false
     var recentCustomPrompts: [String] = []
@@ -111,6 +115,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
     init(
         hotkey: HotkeyConfig = HotkeyConfig(),
         autoCopy: Bool = false,
+        clipboardHistoryLimit: Int = ClipSettings.defaultClipboardHistoryLimit,
         launchAtLoginEnabled: Bool = true,
         launchAtLoginPromptShown: Bool = false,
         recentCustomPrompts: [String] = [],
@@ -124,6 +129,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
     ) {
         self.hotkey = hotkey
         self.autoCopy = autoCopy
+        self.clipboardHistoryLimit = ClipSettings.clampClipboardHistoryLimit(clipboardHistoryLimit)
         self.launchAtLoginEnabled = launchAtLoginEnabled
         self.launchAtLoginPromptShown = launchAtLoginPromptShown
         self.recentCustomPrompts = recentCustomPrompts
@@ -140,6 +146,10 @@ struct ClipSettings: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         hotkey = try container.decodeIfPresent(HotkeyConfig.self, forKey: .hotkey) ?? HotkeyConfig()
         autoCopy = try container.decodeIfPresent(Bool.self, forKey: .autoCopy) ?? false
+        let decodedClipboardHistoryLimit = try container.decodeIfPresent(Int.self, forKey: .clipboardHistoryLimit)
+        clipboardHistoryLimit = ClipSettings.clampClipboardHistoryLimit(
+            decodedClipboardHistoryLimit ?? ClipSettings.defaultClipboardHistoryLimit
+        )
         launchAtLoginEnabled = try container.decodeIfPresent(Bool.self, forKey: .launchAtLoginEnabled) ?? true
         launchAtLoginPromptShown = try container.decodeIfPresent(Bool.self, forKey: .launchAtLoginPromptShown) ?? false
         recentCustomPrompts = try container.decodeIfPresent([String].self, forKey: .recentCustomPrompts) ?? []
@@ -150,5 +160,9 @@ struct ClipSettings: Codable, Equatable, Sendable {
         actionOrder = try container.decodeIfPresent([String].self, forKey: .actionOrder) ?? []
         checkForUpdatesOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .checkForUpdatesOnLaunch) ?? true
         lastSeenVersion = try container.decodeIfPresent(String.self, forKey: .lastSeenVersion) ?? ""
+    }
+
+    static func clampClipboardHistoryLimit(_ value: Int) -> Int {
+        min(max(value, clipboardHistoryLimitRange.lowerBound), clipboardHistoryLimitRange.upperBound)
     }
 }

@@ -25,6 +25,41 @@ struct ClipHistoryEntry: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
+struct ClipboardHistoryEntry: Identifiable, Codable, Equatable, Sendable {
+    let id: String
+    let text: String
+    let contentType: ContentType
+    let timestamp: Date
+
+    init(
+        id: String = UUID().uuidString,
+        text: String,
+        contentType: ContentType,
+        timestamp: Date = Date()
+    ) {
+        self.id = id
+        self.text = text
+        self.contentType = contentType
+        self.timestamp = timestamp
+    }
+}
+
+enum ClipHistorySection: String, CaseIterable, Identifiable, Sendable {
+    case transformations
+    case clipboard
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .transformations:
+            return "Transformations"
+        case .clipboard:
+            return "Clipboard"
+        }
+    }
+}
+
 struct ClipResultState: Equatable, Sendable {
     let actionID: String
     let actionName: String

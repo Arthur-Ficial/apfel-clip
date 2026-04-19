@@ -8,6 +8,18 @@ actor MockHistoryStore: ClipHistoryStoring {
     func save(_ entries: [ClipHistoryEntry]) async throws { storedEntries = entries }
 }
 
+actor MockClipboardHistoryStore: ClipboardHistoryStoring {
+    var storedEntries: [ClipboardHistoryEntry] = []
+
+    func load(limit: Int) async throws -> [ClipboardHistoryEntry] {
+        Array(storedEntries.prefix(limit))
+    }
+
+    func save(_ entries: [ClipboardHistoryEntry], limit: Int) async throws {
+        storedEntries = Array(entries.prefix(limit))
+    }
+}
+
 actor MockSettingsStore: ClipSettingsStoring {
     var storedSettings: ClipSettings = ClipSettings()
 

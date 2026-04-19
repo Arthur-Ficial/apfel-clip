@@ -21,12 +21,31 @@ struct PersistenceTests {
         #expect(loaded[1].output == "Short")
     }
 
+    @Test("FileClipboardHistoryStore round-trips entries with limit")
+    func clipboardHistoryRoundTrip() async throws {
+        let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = FileClipboardHistoryStore(url: tempDirectory.appendingPathComponent("clipboard-history.json"))
+        let entries = [
+            ClipboardHistoryEntry(text: "first", contentType: .text),
+            ClipboardHistoryEntry(text: "second", contentType: .code),
+            ClipboardHistoryEntry(text: "third", contentType: .json),
+        ]
+
+        try await store.save(entries, limit: 2)
+        let loaded = try await store.load(limit: 2)
+
+        #expect(loaded.count == 2)
+        #expect(loaded[0].text == "first")
+        #expect(loaded[1].contentType == .code)
+    }
+
     @Test("UserDefaultsSettingsStore round-trips settings")
     func settingsRoundTrip() async {
         let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let store = UserDefaultsSettingsStore(defaults: defaults, key: "settings")
         let settings = ClipSettings(
             autoCopy: false,
+            clipboardHistoryLimit: 12,
             recentCustomPrompts: ["Rewrite as haiku"],
             preferredPanel: .history
         )
@@ -88,4 +107,26 @@ struct PersistenceTests {
 
         #expect(loaded == ClipSettings())
     }
+
+        @Test("ClipSettings clamps clipboard history limit and decodes older payloads")
+        func clipboardHistoryLimitCompatibility() throws {
+                let decoder = JSONDecoder()
+
+                let legacyData = try #require("""
+                {
+                    "autoCopy": true,
+                    "preferredPanel": "history"
+                }
+                """.data(using: .utf8))
+                let legacySettings = try decoder.decode(ClipSettings.self, from: legacyData)
+                #expect(legacySettings.clipboardHistoryLimit == ClipSettings.defaultClipboardHistoryLimit)
+
+                let outOfBoundsData = try #require("""
+                {
+                    "clipboardHistoryLimit": 999
+                }
+                """.data(using: .utf8))
+                let clampedSettings = try decoder.decode(ClipSettings.self, from: outOfBoundsData)
+                #expect(clampedSettings.clipboardHistoryLimit == ClipSettings.clipboardHistoryLimitRange.upperBound)
+        }
 }
