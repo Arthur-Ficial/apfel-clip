@@ -5,6 +5,11 @@ protocol ClipHistoryStoring: Sendable {
     func save(_ entries: [ClipHistoryEntry]) async throws
 }
 
+protocol ClipboardHistoryStoring: Sendable {
+    func load(limit: Int) async throws -> [ClipboardHistoryEntry]
+    func save(_ entries: [ClipboardHistoryEntry], limit: Int) async throws
+}
+
 protocol ClipSettingsStoring: Sendable {
     func load() async -> ClipSettings
     func save(_ settings: ClipSettings) async

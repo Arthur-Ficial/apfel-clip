@@ -10,6 +10,7 @@ struct WelcomeTests {
             actionExecutor: MockActionExecutor(),
             clipboardService: MockClipboardService(),
             historyStore: MockHistoryStore(),
+            clipboardHistoryStore: MockClipboardHistoryStore(),
             settingsStore: settingsStore,
             launchAtLoginController: MockLaunchAtLoginController()
         )

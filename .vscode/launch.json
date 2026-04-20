@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:apfel-clip}",
+      "name": "Debug apfel-clip",
+      "target": "apfel-clip",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug apfel-clip"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:apfel-clip}",
+      "name": "Release apfel-clip",
+      "target": "apfel-clip",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release apfel-clip"
+    }
+  ]
+}

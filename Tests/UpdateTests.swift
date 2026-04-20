@@ -10,6 +10,7 @@ struct UpdateTests {
             actionExecutor: MockActionExecutor(),
             clipboardService: MockClipboardService(),
             historyStore: MockHistoryStore(),
+            clipboardHistoryStore: MockClipboardHistoryStore(),
             settingsStore: MockSettingsStore(),
             launchAtLoginController: MockLaunchAtLoginController()
         )

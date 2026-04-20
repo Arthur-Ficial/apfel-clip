@@ -10,6 +10,7 @@ final class PopoverViewModel {
     private let actionExecutor: any ClipActionExecuting
     private let clipboardService: any ClipboardService
     private let historyStore: any ClipHistoryStoring
+    private let clipboardHistoryStore: any ClipboardHistoryStoring
     private let settingsStore: any ClipSettingsStoring
     private let launchAtLoginController: any LaunchAtLoginControlling
 
@@ -17,6 +18,8 @@ final class PopoverViewModel {
     var clipboardText: String = ""
     var contentType: ContentType = .text
     var history: [ClipHistoryEntry] = []
+    var clipboardHistory: [ClipboardHistoryEntry] = []
+    var selectedHistorySection: ClipHistorySection = .transformations
     var settings: ClipSettings = ClipSettings()
     var customPrompt: String = ""
     var result: ClipResultState?
@@ -37,12 +40,14 @@ final class PopoverViewModel {
         actionExecutor: any ClipActionExecuting,
         clipboardService: any ClipboardService,
         historyStore: any ClipHistoryStoring,
+        clipboardHistoryStore: any ClipboardHistoryStoring,
         settingsStore: any ClipSettingsStoring,
         launchAtLoginController: any LaunchAtLoginControlling
     ) {
         self.actionExecutor = actionExecutor
         self.clipboardService = clipboardService
         self.historyStore = historyStore
+        self.clipboardHistoryStore = clipboardHistoryStore
         self.settingsStore = settingsStore
         self.launchAtLoginController = launchAtLoginController
     }
@@ -134,14 +139,18 @@ final class PopoverViewModel {
     }
 
     func loadPersistedState() async {
-        history = (try? await historyStore.load()) ?? []
         settings = await settingsStore.load()
+        history = (try? await historyStore.load()) ?? []
+        clipboardHistory = (try? await clipboardHistoryStore.load(limit: clipboardHistoryLimit)) ?? []
         screen = settings.preferredPanel.screen
     }
 
     func attachClipboardListener() {
         clipboardService.onExternalChange = { [weak self] _ in
-            self?.handleExternalClipboardChange()
+            guard let self else { return }
+            Task { @MainActor in
+                await self.handleExternalClipboardChange()
+            }
         }
     }
 
@@ -308,6 +317,36 @@ final class PopoverViewModel {
         }
     }
 
+    func removeHistoryEntry(_ id: String) async {
+        let filteredHistory = history.filter { $0.id != id }
+        guard filteredHistory.count != history.count else { return }
+        history = filteredHistory
+        try? await historyStore.save(filteredHistory)
+    }
+
+    func clearClipboardHistory() async {
+        clipboardHistory = []
+        try? await clipboardHistoryStore.save([], limit: clipboardHistoryLimit)
+        showBanner(ClipBanner(style: .info, title: "Clipboard history cleared", detail: nil, autoDismiss: true))
+    }
+
+    func removeClipboardHistoryEntry(_ id: String) async {
+        let filteredHistory = clipboardHistory.filter { $0.id != id }
+        guard filteredHistory.count != clipboardHistory.count else { return }
+        clipboardHistory = filteredHistory
+        try? await clipboardHistoryStore.save(filteredHistory, limit: clipboardHistoryLimit)
+    }
+
+    func copyClipboardHistoryEntry(_ entry: ClipboardHistoryEntry) {
+        clipboardService.setText(entry.text)
+        clipboardText = entry.text
+        contentType = entry.contentType
+        result = nil
+        selectedHistorySection = .clipboard
+        screen = .actions
+        showBanner(ClipBanner(style: .success, title: "Copied to clipboard", detail: "Clipboard history"))
+    }
+
     func applySettings(
         autoCopy: Bool?,
         preferredPanel: ClipPrimaryPanel?,
@@ -405,6 +444,17 @@ final class PopoverViewModel {
     func updateAutoCopy(_ enabled: Bool) async {
         settings.autoCopy = enabled
         await persistSettings()
+    }
+
+    func updateClipboardHistoryLimit(_ value: Int) async {
+        settings.clipboardHistoryLimit = ClipSettings.clampClipboardHistoryLimit(value)
+        clipboardHistory = Array(clipboardHistory.prefix(clipboardHistoryLimit))
+        await persistSettings()
+        try? await clipboardHistoryStore.save(clipboardHistory, limit: clipboardHistoryLimit)
+    }
+
+    var clipboardHistoryLimit: Int {
+        ClipSettings.clampClipboardHistoryLimit(settings.clipboardHistoryLimit)
     }
 
     var hotkeyDisplayLabel: String {
@@ -518,8 +568,9 @@ final class PopoverViewModel {
         await persistSettings()
     }
 
-    private func handleExternalClipboardChange() {
+    private func handleExternalClipboardChange() async {
         refreshFromClipboard()
+        await recordClipboardHistoryEntryIfNeeded()
         if screen == .result {
             // New external content arrived — stale result is no longer relevant; go home
             result = nil
@@ -531,6 +582,22 @@ final class PopoverViewModel {
                 showBanner(ClipBanner(style: .info, title: "Clipboard updated", detail: "Custom prompt will apply to the latest clipboard text.", autoDismiss: true))
             }
         }
+    }
+
+    private func recordClipboardHistoryEntryIfNeeded() async {
+        guard !clipboardText.isEmpty else { return }
+
+        if clipboardHistory.first?.text == clipboardText {
+            return
+        }
+
+        let entry = ClipboardHistoryEntry(
+            text: clipboardText,
+            contentType: contentType
+        )
+        clipboardHistory.insert(entry, at: 0)
+        clipboardHistory = Array(clipboardHistory.prefix(clipboardHistoryLimit))
+        try? await clipboardHistoryStore.save(clipboardHistory, limit: clipboardHistoryLimit)
     }
 
     private func handleSuccessfulRun(
@@ -562,7 +629,7 @@ final class PopoverViewModel {
             output: trimmedOutput
         )
         history.insert(entry, at: 0)
-        history = Array(history.prefix(50))
+        history = Array(history.prefix(FileHistoryStore.defaultMaxEntries))
         try? await historyStore.save(history)
 
         if shouldCopy {

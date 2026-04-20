@@ -9,12 +9,14 @@ struct HotkeySettingsTests {
         let executor = MockActionExecutor()
         let clipboard = MockClipboardService()
         let historyStore = MockHistoryStore()
+        let clipboardHistoryStore = MockClipboardHistoryStore()
         let settingsStore = MockSettingsStore()
         let launchAtLoginController = MockLaunchAtLoginController()
         let viewModel = PopoverViewModel(
             actionExecutor: executor,
             clipboardService: clipboard,
             historyStore: historyStore,
+            clipboardHistoryStore: clipboardHistoryStore,
             settingsStore: settingsStore,
             launchAtLoginController: launchAtLoginController
         )
