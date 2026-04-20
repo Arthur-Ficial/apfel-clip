@@ -15,12 +15,17 @@ struct ClipboardSourceAppOption: Identifiable, Equatable, Sendable {
 @MainActor
 @Observable
 final class PopoverViewModel {
+    typealias InstalledClipboardSourceAppsProvider = @Sendable () -> [ClipboardSourceAppOption]
+    typealias ClipboardSourceAppURLResolver = @Sendable (String) -> URL?
+
     private let actionExecutor: any ClipActionExecuting
     private let clipboardService: any ClipboardService
     private let historyStore: any ClipHistoryStoring
     private let clipboardHistoryStore: any ClipboardHistoryStoring
     private let settingsStore: any ClipSettingsStoring
     private let launchAtLoginController: any LaunchAtLoginControlling
+    private let installedClipboardSourceAppsProvider: InstalledClipboardSourceAppsProvider
+    private let clipboardSourceAppURLResolver: ClipboardSourceAppURLResolver
 
     var screen: ClipScreen = .actions
     var clipboardText: String = ""
@@ -56,7 +61,13 @@ final class PopoverViewModel {
         historyStore: any ClipHistoryStoring,
         clipboardHistoryStore: any ClipboardHistoryStoring,
         settingsStore: any ClipSettingsStoring,
-        launchAtLoginController: any LaunchAtLoginControlling
+        launchAtLoginController: any LaunchAtLoginControlling,
+        installedClipboardSourceAppsProvider: @escaping InstalledClipboardSourceAppsProvider = {
+            PopoverViewModel.discoverInstalledClipboardSourceApps()
+        },
+        clipboardSourceAppURLResolver: @escaping ClipboardSourceAppURLResolver = {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        }
     ) {
         self.actionExecutor = actionExecutor
         self.clipboardService = clipboardService
@@ -64,6 +75,8 @@ final class PopoverViewModel {
         self.clipboardHistoryStore = clipboardHistoryStore
         self.settingsStore = settingsStore
         self.launchAtLoginController = launchAtLoginController
+        self.installedClipboardSourceAppsProvider = installedClipboardSourceAppsProvider
+        self.clipboardSourceAppURLResolver = clipboardSourceAppURLResolver
     }
 
     var availableActions: [ClipAction] {
@@ -516,8 +529,9 @@ final class PopoverViewModel {
         if !forceReload && !installedClipboardSourceApps.isEmpty { return }
 
         isLoadingInstalledClipboardSourceApps = true
+        let appsProvider = self.installedClipboardSourceAppsProvider
         let apps = await Task.detached(priority: .utility) {
-            Self.discoverInstalledClipboardSourceApps()
+            appsProvider()
         }.value
         installedClipboardSourceApps = apps
         isLoadingInstalledClipboardSourceApps = false
@@ -715,7 +729,7 @@ final class PopoverViewModel {
             return knownApp
         }
 
-        if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier),
+        if let appURL = clipboardSourceAppURLResolver(bundleIdentifier),
            let discoveredApp = Self.makeClipboardSourceAppOption(from: appURL, preferredBundleIdentifier: bundleIdentifier) {
             return discoveredApp
         }
