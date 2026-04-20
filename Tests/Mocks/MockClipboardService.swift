@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class MockClipboardService: ClipboardService {
     var currentText: String?
+    var isCurrentClipboardSensitive = false
     var onExternalChange: ((String?) -> Void)?
     var setTextCalls: [String] = []
 
