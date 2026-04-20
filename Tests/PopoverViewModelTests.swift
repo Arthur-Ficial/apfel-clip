@@ -312,6 +312,29 @@ struct PopoverViewModelTests {
         #expect(stored.isEmpty)
     }
 
+    @Test("Clipboard content from ignored apps is hidden and not persisted")
+    func ignoredAppClipboardHistoryIsSkipped() async throws {
+        let (viewModel, _, clipboard, _, clipboardHistoryStore, settingsStore, _) = makeViewModel()
+        await settingsStore.save(ClipSettings(ignoredClipboardSourceBundleIDs: ["com.apple.Passwords"]))
+        await viewModel.loadPersistedState()
+        viewModel.attachClipboardListener()
+
+        clipboard.currentSourceAppBundleIdentifier = "com.apple.Passwords"
+        clipboard.currentSourceAppName = "Passwords"
+        clipboard.currentText = "super-secret-password"
+        clipboard.refreshNow()
+        await Task.yield()
+
+        #expect(viewModel.clipboardText.isEmpty)
+        #expect(viewModel.isClipboardContentIgnoredByApp)
+        #expect(viewModel.clipboardEmptyStateTitle == "Clipboard ignored")
+        #expect(viewModel.clipboardIgnoredAppDisplayName == "Passwords")
+        #expect(viewModel.clipboardHistory.isEmpty)
+
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.isEmpty)
+    }
+
     @Test("Removing a clipboard history item updates total and persistence")
     func removeClipboardHistoryEntry() async throws {
         let (viewModel, _, _, _, clipboardHistoryStore, _, _) = makeViewModel()
@@ -381,5 +404,42 @@ struct PopoverViewModelTests {
         #expect(loadedSettings.clipboardHistoryLimit == 2)
         let stored = try await clipboardHistoryStore.load(limit: 40)
         #expect(stored.count == 2)
+    }
+
+    @Test("Managing ignored clipboard apps persists sanitized bundle identifiers")
+    func manageIgnoredClipboardApps() async {
+        let (viewModel, _, clipboard, _, _, settingsStore, _) = makeViewModel()
+
+        await viewModel.addIgnoredClipboardSourceBundleID(" com.apple.Passwords ")
+        await viewModel.addIgnoredClipboardSourceBundleID("com.apple.passwords")
+        await viewModel.addIgnoredClipboardSourceBundleID("com.apple.finder")
+        await viewModel.removeIgnoredClipboardSourceBundleID("com.apple.finder")
+
+        clipboard.currentSourceAppBundleIdentifier = "com.apple.Passwords"
+        clipboard.currentSourceAppName = "Passwords"
+        clipboard.currentText = "new-password"
+        viewModel.refreshFromClipboard()
+
+        #expect(viewModel.settings.ignoredClipboardSourceBundleIDs == ["com.apple.Passwords"])
+        #expect(viewModel.isClipboardContentIgnoredByApp)
+
+        let loaded = await settingsStore.load()
+        #expect(loaded.ignoredClipboardSourceBundleIDs == ["com.apple.Passwords"])
+    }
+
+    @Test("Ignoring the current clipboard source app adds its bundle identifier")
+    func addCurrentClipboardSourceAppToIgnoredList() async {
+        let (viewModel, _, clipboard, _, _, settingsStore, _) = makeViewModel()
+        clipboard.currentSourceAppBundleIdentifier = "com.apple.Passwords"
+        clipboard.currentSourceAppName = "Passwords"
+        clipboard.currentText = "pw"
+        viewModel.refreshFromClipboard()
+
+        await viewModel.addCurrentClipboardSourceAppToIgnoredList()
+
+        #expect(viewModel.settings.ignoredClipboardSourceBundleIDs == ["com.apple.Passwords"])
+        #expect(viewModel.isClipboardContentIgnoredByApp)
+        let loaded = await settingsStore.load()
+        #expect(loaded.ignoredClipboardSourceBundleIDs == ["com.apple.Passwords"])
     }
 }

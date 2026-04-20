@@ -13,6 +13,8 @@ final class PasteboardClipboardService: ClipboardService {
     var isCurrentClipboardSensitive: Bool {
         Self.shouldIgnoreHistory(for: NSPasteboard.general.types)
     }
+    var currentSourceAppBundleIdentifier: String?
+    var currentSourceAppName: String?
     var onExternalChange: ((String?) -> Void)?
 
     private var lastChangeCount = -1
@@ -38,6 +40,8 @@ final class PasteboardClipboardService: ClipboardService {
         let pasteboard = NSPasteboard.general
         lastChangeCount = pasteboard.changeCount
         currentText = pasteboard.string(forType: .string)
+        currentSourceAppBundleIdentifier = nil
+        currentSourceAppName = nil
         onExternalChange?(currentText)
     }
 
@@ -47,6 +51,8 @@ final class PasteboardClipboardService: ClipboardService {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         currentText = text
+        currentSourceAppBundleIdentifier = Bundle.main.bundleIdentifier
+        currentSourceAppName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
         lastChangeCount = pasteboard.changeCount
     }
 
@@ -61,6 +67,9 @@ final class PasteboardClipboardService: ClipboardService {
             return
         }
 
+        let sourceApp = NSWorkspace.shared.frontmostApplication
+        currentSourceAppBundleIdentifier = sourceApp?.bundleIdentifier
+        currentSourceAppName = sourceApp?.localizedName
         currentText = pasteboard.string(forType: .string)
         onExternalChange?(currentText)
     }

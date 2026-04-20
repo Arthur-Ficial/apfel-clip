@@ -67,6 +67,7 @@ struct PersistenceTests {
         let settings = ClipSettings(
             autoCopy: false,
             clipboardHistoryLimit: 12,
+            ignoredClipboardSourceBundleIDs: ["com.apple.Passwords", "com.apple.finder"],
             recentCustomPrompts: ["Rewrite as haiku"],
             preferredPanel: .history
         )
@@ -144,10 +145,12 @@ struct PersistenceTests {
 
                 let outOfBoundsData = try #require("""
                 {
-                    "clipboardHistoryLimit": 999
+                    "clipboardHistoryLimit": 999,
+                    "ignoredClipboardSourceBundleIDs": [" com.apple.Passwords ", "com.apple.passwords", ""]
                 }
                 """.data(using: .utf8))
                 let clampedSettings = try decoder.decode(ClipSettings.self, from: outOfBoundsData)
                 #expect(clampedSettings.clipboardHistoryLimit == ClipSettings.clipboardHistoryLimitRange.upperBound)
+                #expect(clampedSettings.ignoredClipboardSourceBundleIDs == ["com.apple.Passwords"])
         }
 }
