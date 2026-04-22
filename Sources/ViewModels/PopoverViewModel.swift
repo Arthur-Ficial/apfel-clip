@@ -4,19 +4,37 @@ import Observation
 
 enum MoveDirection: Sendable { case up, down }
 
+struct ClipboardSourceAppOption: Identifiable, Equatable, Sendable {
+    let bundleIdentifier: String
+    let name: String
+    let path: String
+
+    var id: String { bundleIdentifier }
+}
+
 @MainActor
 @Observable
 final class PopoverViewModel {
+    typealias InstalledClipboardSourceAppsProvider = @Sendable () -> [ClipboardSourceAppOption]
+    typealias ClipboardSourceAppURLResolver = @Sendable (String) -> URL?
+
     private let actionExecutor: any ClipActionExecuting
     private let clipboardService: any ClipboardService
     private let historyStore: any ClipHistoryStoring
     private let clipboardHistoryStore: any ClipboardHistoryStoring
     private let settingsStore: any ClipSettingsStoring
     private let launchAtLoginController: any LaunchAtLoginControlling
+    private let installedClipboardSourceAppsProvider: InstalledClipboardSourceAppsProvider
+    private let clipboardSourceAppURLResolver: ClipboardSourceAppURLResolver
 
     var screen: ClipScreen = .actions
     var clipboardText: String = ""
     var isClipboardContentSensitive = false
+    var isClipboardContentIgnoredByApp = false
+    var currentClipboardSourceAppBundleIdentifier: String?
+    var currentClipboardSourceAppName: String?
+    var installedClipboardSourceApps: [ClipboardSourceAppOption] = []
+    var isLoadingInstalledClipboardSourceApps = false
     var contentType: ContentType = .text
     var history: [ClipHistoryEntry] = []
     var clipboardHistory: [ClipboardHistoryEntry] = []
@@ -43,7 +61,13 @@ final class PopoverViewModel {
         historyStore: any ClipHistoryStoring,
         clipboardHistoryStore: any ClipboardHistoryStoring,
         settingsStore: any ClipSettingsStoring,
-        launchAtLoginController: any LaunchAtLoginControlling
+        launchAtLoginController: any LaunchAtLoginControlling,
+        installedClipboardSourceAppsProvider: @escaping InstalledClipboardSourceAppsProvider = {
+            PopoverViewModel.discoverInstalledClipboardSourceApps()
+        },
+        clipboardSourceAppURLResolver: @escaping ClipboardSourceAppURLResolver = {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        }
     ) {
         self.actionExecutor = actionExecutor
         self.clipboardService = clipboardService
@@ -51,6 +75,8 @@ final class PopoverViewModel {
         self.clipboardHistoryStore = clipboardHistoryStore
         self.settingsStore = settingsStore
         self.launchAtLoginController = launchAtLoginController
+        self.installedClipboardSourceAppsProvider = installedClipboardSourceAppsProvider
+        self.clipboardSourceAppURLResolver = clipboardSourceAppURLResolver
     }
 
     var availableActions: [ClipAction] {
@@ -139,11 +165,42 @@ final class PopoverViewModel {
         if isClipboardContentSensitive {
             return "Sensitive clipboard content hidden for privacy and excluded from history."
         }
+        if isClipboardContentIgnoredByApp {
+            return "Clipboard content from an ignored app is hidden and excluded from history."
+        }
         return "Copy text, code, JSON, or an error to unlock tailored actions."
     }
 
     var clipboardEmptyStateTitle: String {
-        isClipboardContentSensitive ? "Clipboard content hidden" : "Nothing in the clipboard yet"
+        if isClipboardContentSensitive {
+            return "Clipboard content hidden"
+        }
+        if isClipboardContentIgnoredByApp {
+            return "Clipboard ignored"
+        }
+        return "Nothing in the clipboard yet"
+    }
+
+    var clipboardIgnoredAppDisplayName: String? {
+        currentClipboardSourceAppName ?? currentClipboardSourceAppBundleIdentifier
+    }
+
+    var clipboardIgnoredAppDescription: String {
+        if let appName = clipboardIgnoredAppDisplayName {
+            return "Clipboard content from \(appName) is hidden and excluded from history."
+        }
+        return "Clipboard content from an ignored app is hidden and excluded from history."
+    }
+
+    var currentClipboardSourceAppOption: ClipboardSourceAppOption? {
+        guard let bundleID = currentClipboardSourceAppBundleIdentifier, !bundleID.isEmpty else { return nil }
+        return resolveClipboardSourceApp(bundleIdentifier: bundleID, preferredName: currentClipboardSourceAppName)
+    }
+
+    var ignoredClipboardSourceApps: [ClipboardSourceAppOption] {
+        settings.ignoredClipboardSourceBundleIDs.map {
+            resolveClipboardSourceApp(bundleIdentifier: $0, preferredName: nil)
+        }
     }
 
     func loadPersistedState() async {
@@ -164,8 +221,11 @@ final class PopoverViewModel {
 
     func refreshFromClipboard() {
         let rawText = clipboardService.currentText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        currentClipboardSourceAppBundleIdentifier = clipboardService.currentSourceAppBundleIdentifier
+        currentClipboardSourceAppName = clipboardService.currentSourceAppName
         isClipboardContentSensitive = clipboardService.isCurrentClipboardSensitive && !rawText.isEmpty
-        let text = isClipboardContentSensitive ? "" : rawText
+        isClipboardContentIgnoredByApp = shouldIgnoreClipboardSourceApp() && !rawText.isEmpty
+        let text = (isClipboardContentSensitive || isClipboardContentIgnoredByApp) ? "" : rawText
         clipboardText = text
         contentType = text.isEmpty ? .text : ContentDetector.detect(text)
 
@@ -464,6 +524,46 @@ final class PopoverViewModel {
         try? await clipboardHistoryStore.save(clipboardHistory, limit: clipboardHistoryLimit)
     }
 
+    func loadInstalledClipboardSourceAppsIfNeeded(forceReload: Bool = false) async {
+        if isLoadingInstalledClipboardSourceApps { return }
+        if !forceReload && !installedClipboardSourceApps.isEmpty { return }
+
+        isLoadingInstalledClipboardSourceApps = true
+        let appsProvider = self.installedClipboardSourceAppsProvider
+        let apps = await Task.detached(priority: .utility) {
+            appsProvider()
+        }.value
+        installedClipboardSourceApps = apps
+        isLoadingInstalledClipboardSourceApps = false
+    }
+
+    func addIgnoredClipboardSourceBundleID(_ bundleID: String) async {
+        settings.ignoredClipboardSourceBundleIDs = ClipSettings.sanitizeBundleIdentifiers(
+            settings.ignoredClipboardSourceBundleIDs + [bundleID]
+        )
+        await persistSettings()
+        refreshFromClipboard()
+    }
+
+    func addCurrentClipboardSourceAppToIgnoredList() async {
+        guard let bundleID = currentClipboardSourceAppBundleIdentifier, !bundleID.isEmpty else { return }
+        await addIgnoredClipboardSourceBundleID(bundleID)
+    }
+
+    func addIgnoredClipboardSourceApp(_ app: ClipboardSourceAppOption) async {
+        await addIgnoredClipboardSourceBundleID(app.bundleIdentifier)
+    }
+
+    func removeIgnoredClipboardSourceBundleID(_ bundleID: String) async {
+        let updated = settings.ignoredClipboardSourceBundleIDs.filter {
+            $0.caseInsensitiveCompare(bundleID) != .orderedSame
+        }
+        guard updated.count != settings.ignoredClipboardSourceBundleIDs.count else { return }
+        settings.ignoredClipboardSourceBundleIDs = updated
+        await persistSettings()
+        refreshFromClipboard()
+    }
+
     var clipboardHistoryLimit: Int {
         ClipSettings.clampClipboardHistoryLimit(settings.clipboardHistoryLimit)
     }
@@ -598,6 +698,7 @@ final class PopoverViewModel {
     private func recordClipboardHistoryEntryIfNeeded() async {
         guard !clipboardText.isEmpty else { return }
         guard !clipboardService.isCurrentClipboardSensitive else { return }
+        guard !shouldIgnoreClipboardSourceApp() else { return }
 
         if clipboardHistory.first?.text == clipboardText {
             return
@@ -610,6 +711,91 @@ final class PopoverViewModel {
         clipboardHistory.insert(entry, at: 0)
         clipboardHistory = Array(clipboardHistory.prefix(clipboardHistoryLimit))
         try? await clipboardHistoryStore.save(clipboardHistory, limit: clipboardHistoryLimit)
+    }
+
+    private func shouldIgnoreClipboardSourceApp() -> Bool {
+        guard let bundleID = currentClipboardSourceAppBundleIdentifier, !bundleID.isEmpty else {
+            return false
+        }
+        return settings.ignoredClipboardSourceBundleIDs.contains {
+            $0.caseInsensitiveCompare(bundleID) == .orderedSame
+        }
+    }
+
+    private func resolveClipboardSourceApp(bundleIdentifier: String, preferredName: String?) -> ClipboardSourceAppOption {
+        if let knownApp = installedClipboardSourceApps.first(where: {
+            $0.bundleIdentifier.caseInsensitiveCompare(bundleIdentifier) == .orderedSame
+        }) {
+            return knownApp
+        }
+
+        if let appURL = clipboardSourceAppURLResolver(bundleIdentifier),
+           let discoveredApp = Self.makeClipboardSourceAppOption(from: appURL, preferredBundleIdentifier: bundleIdentifier) {
+            return discoveredApp
+        }
+
+        return ClipboardSourceAppOption(
+            bundleIdentifier: bundleIdentifier,
+            name: preferredName ?? bundleIdentifier,
+            path: ""
+        )
+    }
+
+    nonisolated private static func discoverInstalledClipboardSourceApps() -> [ClipboardSourceAppOption] {
+        let fileManager = FileManager.default
+        let searchRoots = [
+            URL(fileURLWithPath: "/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/Applications/Utilities", isDirectory: true),
+            URL(fileURLWithPath: "/System/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/System/Applications/Utilities", isDirectory: true),
+            fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true),
+        ]
+
+        var appsByBundleID: [String: ClipboardSourceAppOption] = [:]
+
+        for root in searchRoots where fileManager.fileExists(atPath: root.path) {
+            guard let enumerator = fileManager.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                continue
+            }
+
+            for case let url as URL in enumerator {
+                guard url.pathExtension.caseInsensitiveCompare("app") == .orderedSame else { continue }
+                defer { enumerator.skipDescendants() }
+
+                guard let app = makeClipboardSourceAppOption(from: url, preferredBundleIdentifier: nil) else { continue }
+                if appsByBundleID[app.bundleIdentifier] == nil {
+                    appsByBundleID[app.bundleIdentifier] = app
+                }
+            }
+        }
+
+        return appsByBundleID.values.sorted {
+            let order = $0.name.localizedCaseInsensitiveCompare($1.name)
+            if order == .orderedSame {
+                return $0.bundleIdentifier.localizedCaseInsensitiveCompare($1.bundleIdentifier) == .orderedAscending
+            }
+            return order == .orderedAscending
+        }
+    }
+
+    nonisolated private static func makeClipboardSourceAppOption(from url: URL, preferredBundleIdentifier: String?) -> ClipboardSourceAppOption? {
+        guard let bundle = Bundle(url: url) else { return nil }
+        let bundleIdentifier = bundle.bundleIdentifier ?? preferredBundleIdentifier
+        guard let bundleIdentifier, !bundleIdentifier.isEmpty else { return nil }
+
+        let appName = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? url.deletingPathExtension().lastPathComponent
+
+        return ClipboardSourceAppOption(
+            bundleIdentifier: bundleIdentifier,
+            name: appName,
+            path: url.path
+        )
     }
 
     private func handleSuccessfulRun(

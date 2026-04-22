@@ -5,6 +5,8 @@ import Foundation
 final class MockClipboardService: ClipboardService {
     var currentText: String?
     var isCurrentClipboardSensitive = false
+    var currentSourceAppBundleIdentifier: String?
+    var currentSourceAppName: String?
     var onExternalChange: ((String?) -> Void)?
     var setTextCalls: [String] = []
 
@@ -17,6 +19,8 @@ final class MockClipboardService: ClipboardService {
 
     func setText(_ text: String) {
         currentText = text
+        currentSourceAppBundleIdentifier = "dev.apfel-clip"
+        currentSourceAppName = "apfel-clip"
         setTextCalls.append(text)
     }
 }

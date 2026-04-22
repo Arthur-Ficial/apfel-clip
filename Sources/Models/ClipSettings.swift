@@ -101,6 +101,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
     var hotkey: HotkeyConfig = HotkeyConfig()
     var autoCopy: Bool = false
     var clipboardHistoryLimit: Int = ClipSettings.defaultClipboardHistoryLimit
+    var ignoredClipboardSourceBundleIDs: [String] = []
     var launchAtLoginEnabled: Bool = true
     var launchAtLoginPromptShown: Bool = false
     var recentCustomPrompts: [String] = []
@@ -116,6 +117,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
         hotkey: HotkeyConfig = HotkeyConfig(),
         autoCopy: Bool = false,
         clipboardHistoryLimit: Int = ClipSettings.defaultClipboardHistoryLimit,
+        ignoredClipboardSourceBundleIDs: [String] = [],
         launchAtLoginEnabled: Bool = true,
         launchAtLoginPromptShown: Bool = false,
         recentCustomPrompts: [String] = [],
@@ -130,6 +132,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
         self.hotkey = hotkey
         self.autoCopy = autoCopy
         self.clipboardHistoryLimit = ClipSettings.clampClipboardHistoryLimit(clipboardHistoryLimit)
+        self.ignoredClipboardSourceBundleIDs = ClipSettings.sanitizeBundleIdentifiers(ignoredClipboardSourceBundleIDs)
         self.launchAtLoginEnabled = launchAtLoginEnabled
         self.launchAtLoginPromptShown = launchAtLoginPromptShown
         self.recentCustomPrompts = recentCustomPrompts
@@ -150,6 +153,9 @@ struct ClipSettings: Codable, Equatable, Sendable {
         clipboardHistoryLimit = ClipSettings.clampClipboardHistoryLimit(
             decodedClipboardHistoryLimit ?? ClipSettings.defaultClipboardHistoryLimit
         )
+        ignoredClipboardSourceBundleIDs = ClipSettings.sanitizeBundleIdentifiers(
+            try container.decodeIfPresent([String].self, forKey: .ignoredClipboardSourceBundleIDs) ?? []
+        )
         launchAtLoginEnabled = try container.decodeIfPresent(Bool.self, forKey: .launchAtLoginEnabled) ?? true
         launchAtLoginPromptShown = try container.decodeIfPresent(Bool.self, forKey: .launchAtLoginPromptShown) ?? false
         recentCustomPrompts = try container.decodeIfPresent([String].self, forKey: .recentCustomPrompts) ?? []
@@ -164,5 +170,15 @@ struct ClipSettings: Codable, Equatable, Sendable {
 
     static func clampClipboardHistoryLimit(_ value: Int) -> Int {
         min(max(value, clipboardHistoryLimitRange.lowerBound), clipboardHistoryLimitRange.upperBound)
+    }
+
+    static func sanitizeBundleIdentifiers(_ bundleIDs: [String]) -> [String] {
+        var deduped: [String] = []
+        for bundleID in bundleIDs.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }) where !bundleID.isEmpty {
+            if !deduped.contains(where: { $0.caseInsensitiveCompare(bundleID) == .orderedSame }) {
+                deduped.append(bundleID)
+            }
+        }
+        return deduped.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 }

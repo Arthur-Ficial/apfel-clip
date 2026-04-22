@@ -7,6 +7,8 @@ struct PopoverRootView: View {
     @State private var hoveredClipboardHistoryID: String?
     @State private var hoveredRecentPromptID: String?
     @State private var dropTargetID: String?
+    @State private var isIgnoringAppPickerPresented = false
+    @State private var ignoredAppsSearchText = ""
 
     var body: some View {
         ZStack {
@@ -48,6 +50,17 @@ struct PopoverRootView: View {
         )) {
             WelcomeSheetView(viewModel: viewModel)
                 .frame(width: 480)
+        }
+        .sheet(isPresented: $isIgnoringAppPickerPresented) {
+            ClipboardSourceAppPickerSheet(
+                viewModel: viewModel,
+                searchText: $ignoredAppsSearchText,
+                dismiss: {
+                    ignoredAppsSearchText = ""
+                    isIgnoringAppPickerPresented = false
+                }
+            )
+            .frame(minWidth: 520, minHeight: 620)
         }
     }
 
@@ -644,6 +657,85 @@ struct PopoverRootView: View {
 
             SurfaceCard {
                 VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Ignored clipboard apps")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Clipboard content from these apps stays hidden and never enters history.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let currentBundleID = viewModel.currentClipboardSourceAppBundleIdentifier,
+                       !currentBundleID.isEmpty {
+                        HStack(alignment: .center, spacing: 10) {
+                            appIdentityView(viewModel.currentClipboardSourceAppOption)
+                            Spacer()
+                            Button {
+                                Task { await viewModel.addCurrentClipboardSourceAppToIgnoredList() }
+                            } label: {
+                                Text("Ignore Current App")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+
+                        Divider()
+                    }
+
+                    HStack(spacing: 8) {
+                        Button {
+                            ignoredAppsSearchText = ""
+                            isIgnoringAppPickerPresented = true
+                            Task { await viewModel.loadInstalledClipboardSourceAppsIfNeeded() }
+                        } label: {
+                            Label("Add App", systemImage: "plus")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+
+                        if viewModel.isLoadingInstalledClipboardSourceApps {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+
+                    Text("Choose an installed app from the list. The bundle identifier is used automatically.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    if viewModel.ignoredClipboardSourceApps.isEmpty {
+                        Text("No ignored apps configured.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(viewModel.ignoredClipboardSourceApps) { app in
+                                HStack(spacing: 10) {
+                                    appIdentityView(app)
+
+                                    Button(role: .destructive) {
+                                        Task { await viewModel.removeIgnoredClipboardSourceBundleID(app.bundleIdentifier) }
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 11, weight: .semibold))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundStyle(.red)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.white.opacity(0.78))
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: 12) {
                     Toggle(isOn: Binding(
                         get: { viewModel.settings.autoCopy },
                         set: { enabled in
@@ -798,6 +890,42 @@ struct PopoverRootView: View {
             }
         }
         } // ScrollView
+    }
+
+    private func appIdentityView(_ app: ClipboardSourceAppOption?) -> some View {
+        HStack(spacing: 10) {
+            appIcon(for: app)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app?.name ?? "Unknown app")
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(app?.bundleIdentifier ?? "Bundle identifier unavailable")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private func appIcon(for app: ClipboardSourceAppOption?) -> some View {
+        Group {
+            if let app, !app.path.isEmpty {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
+                    .resizable()
+            } else {
+                Image(systemName: "app.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(5)
+                    .foregroundStyle(Color.secondary)
+            }
+        }
+        .frame(width: 26, height: 26)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(Color.white.opacity(0.85))
+        )
     }
 
     private var savedActionsSection: some View {
@@ -1370,6 +1498,111 @@ struct PopoverRootView: View {
             return "checkmark.circle.fill"
         case .error:
             return "xmark.octagon.fill"
+        }
+    }
+}
+
+private struct ClipboardSourceAppPickerSheet: View {
+    @Bindable var viewModel: PopoverViewModel
+    @Binding var searchText: String
+    let dismiss: () -> Void
+
+    private var ignoredBundleIDs: Set<String> {
+        Set(viewModel.settings.ignoredClipboardSourceBundleIDs.map { $0.lowercased() })
+    }
+
+    private var filteredApps: [ClipboardSourceAppOption] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return viewModel.installedClipboardSourceApps }
+
+        return viewModel.installedClipboardSourceApps.filter { app in
+            app.name.localizedCaseInsensitiveContains(query)
+                || app.bundleIdentifier.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if viewModel.isLoadingInstalledClipboardSourceApps && viewModel.installedClipboardSourceApps.isEmpty {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Loading installed apps...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if filteredApps.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        Text("No apps found")
+                            .font(.headline)
+                        Text("Try another name or bundle identifier.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List(filteredApps) { app in
+                        Button {
+                            Task {
+                                await viewModel.addIgnoredClipboardSourceApp(app)
+                                dismiss()
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(nsImage: NSWorkspace.shared.icon(forFile: app.path))
+                                    .resizable()
+                                    .frame(width: 30, height: 30)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(app.name)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(.primary)
+                                    Text(app.bundleIdentifier)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if ignoredBundleIDs.contains(app.bundleIdentifier.lowercased()) {
+                                    Label("Added", systemImage: "checkmark.circle.fill")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color(red: 0.16, green: 0.49, blue: 0.22))
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(ignoredBundleIDs.contains(app.bundleIdentifier.lowercased()))
+                    }
+                    .listStyle(.inset)
+                }
+            }
+            .navigationTitle("Choose App")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        Task { await viewModel.loadInstalledClipboardSourceAppsIfNeeded(forceReload: true) }
+                    } label: {
+                        Label("Reload", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(viewModel.isLoadingInstalledClipboardSourceApps)
+                }
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search by app name or bundle identifier")
+        .task {
+            await viewModel.loadInstalledClipboardSourceAppsIfNeeded()
         }
     }
 }
