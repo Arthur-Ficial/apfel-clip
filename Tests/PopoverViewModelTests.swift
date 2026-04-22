@@ -262,6 +262,20 @@ struct PopoverViewModelTests {
         #expect(clipboard.setTextCalls.isEmpty)
     }
 
+    @Test("seedWelcomeClipboardIfNeeded does not overwrite sensitive clipboard content")
+    func seedWelcomeClipboardSkipsWhenClipboardHasSensitiveContent() {
+        let (viewModel, _, clipboard, _, _, _, _) = makeViewModel()
+        clipboard.currentText = "super-secret-password"
+        clipboard.isCurrentClipboardSensitive = true
+        viewModel.refreshFromClipboard()
+
+        viewModel.seedWelcomeClipboardIfNeeded()
+
+        #expect(viewModel.clipboardText.isEmpty)
+        #expect(viewModel.isClipboardContentSensitive)
+        #expect(clipboard.setTextCalls.isEmpty)
+    }
+
     @Test("External clipboard changes are stored separately and deduplicated")
     func externalClipboardHistoryCapture() async throws {
         let (viewModel, _, clipboard, _, clipboardHistoryStore, _, _) = makeViewModel()
@@ -278,6 +292,24 @@ struct PopoverViewModelTests {
 
         let stored = try await clipboardHistoryStore.load(limit: 40)
         #expect(stored.count == 1)
+    }
+
+    @Test("Sensitive clipboard content is not persisted to clipboard history")
+    func sensitiveClipboardHistoryIsSkipped() async throws {
+        let (viewModel, _, clipboard, _, clipboardHistoryStore, _, _) = makeViewModel()
+        viewModel.attachClipboardListener()
+
+        clipboard.isCurrentClipboardSensitive = true
+        clipboard.currentText = "super-secret-password"
+        clipboard.refreshNow()
+        await Task.yield()
+
+        #expect(viewModel.clipboardText.isEmpty)
+        #expect(viewModel.isClipboardContentSensitive)
+        #expect(viewModel.clipboardHistory.isEmpty)
+
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.isEmpty)
     }
 
     @Test("Removing a clipboard history item updates total and persistence")

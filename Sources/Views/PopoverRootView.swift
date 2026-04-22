@@ -181,7 +181,7 @@ struct PopoverRootView: View {
                     if viewModel.clipboardText.isEmpty {
                         emptyHint(
                             icon: "doc.text.magnifyingglass",
-                            title: "Nothing in the clipboard yet",
+                            title: viewModel.clipboardEmptyStateTitle,
                             detail: viewModel.placeholderPreview
                         )
                     } else {

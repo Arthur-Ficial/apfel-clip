@@ -16,6 +16,7 @@ final class PopoverViewModel {
 
     var screen: ClipScreen = .actions
     var clipboardText: String = ""
+    var isClipboardContentSensitive = false
     var contentType: ContentType = .text
     var history: [ClipHistoryEntry] = []
     var clipboardHistory: [ClipboardHistoryEntry] = []
@@ -135,7 +136,14 @@ final class PopoverViewModel {
     }
 
     var placeholderPreview: String {
-        "Copy text, code, JSON, or an error to unlock tailored actions."
+        if isClipboardContentSensitive {
+            return "Sensitive clipboard content hidden for privacy and excluded from history."
+        }
+        return "Copy text, code, JSON, or an error to unlock tailored actions."
+    }
+
+    var clipboardEmptyStateTitle: String {
+        isClipboardContentSensitive ? "Clipboard content hidden" : "Nothing in the clipboard yet"
     }
 
     func loadPersistedState() async {
@@ -155,7 +163,9 @@ final class PopoverViewModel {
     }
 
     func refreshFromClipboard() {
-        let text = clipboardService.currentText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let rawText = clipboardService.currentText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        isClipboardContentSensitive = clipboardService.isCurrentClipboardSensitive && !rawText.isEmpty
+        let text = isClipboardContentSensitive ? "" : rawText
         clipboardText = text
         contentType = text.isEmpty ? .text : ContentDetector.detect(text)
 
@@ -174,7 +184,8 @@ final class PopoverViewModel {
     /// Seeds the clipboard with a welcome example when the user has never used the app
     /// (no history) and the clipboard is currently empty. Safe to call on every launch.
     func seedWelcomeClipboardIfNeeded() {
-        guard history.isEmpty && clipboardText.isEmpty else { return }
+        let rawClipboardText = clipboardService.currentText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard history.isEmpty && clipboardText.isEmpty && rawClipboardText.isEmpty else { return }
         setClipboardText("apfel-clip example - Copy any text, code, or error message. Press \(settings.hotkey.displayLabel) and pick an action: Fix Grammar, Summarise, Explain Code, and more. On-device AI, no API keys needed.")
     }
 
@@ -586,6 +597,7 @@ final class PopoverViewModel {
 
     private func recordClipboardHistoryEntryIfNeeded() async {
         guard !clipboardText.isEmpty else { return }
+        guard !clipboardService.isCurrentClipboardSensitive else { return }
 
         if clipboardHistory.first?.text == clipboardText {
             return
