@@ -1,5 +1,9 @@
 # apfel-clip - Project Instructions
 
+## The Golden Goal
+
+apfel-clip turns the macOS clipboard into an action surface: copy anything, press the global hotkey, pick a content-aware action, and get back the next useful version of what you copied - all on-device. It is a menu-bar-native macOS app that runs every transformation locally through [apfel](https://github.com/Arthur-Ficial/apfel) (Apple's on-device model), so there are no API keys, no cloud round-trips, and no external prompt window. It IS a fast, private, local-first clipboard assistant that stays out of the way and keeps results close to the original. It is NOT a cloud AI client, not a general chat app, and not a place to reimplement model logic - it is a pure HTTP consumer of `apfel --serve` with no FoundationModels dependency. Every feature is scored against making the clipboard feel like an action surface, not temporary storage.
+
 ## Purpose
 
 macOS menu bar app — AI-powered clipboard actions via [apfel](https://github.com/Arthur-Ficial/apfel). Pure HTTP consumer of `apfel --serve`. No model logic, no FoundationModels dependency.
