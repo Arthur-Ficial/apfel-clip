@@ -60,6 +60,7 @@ The goal is simple: make the clipboard feel like an action surface, not just tem
 - **Action manager**: favorite, hide, and drag-reorder actions.
 - **Saved custom actions**: turn any prompt into a reusable action with its own name and icon.
 - **Persistent history**: every successful transformation is stored locally.
+- **Sensitive-data protection**: copies carrying an NSPasteboard privacy marker, or coming from a known password manager (macOS Passwords, KeePassXC, 1Password, Bitwarden, …), never enter clipboard history. Add your own off-limits apps in Settings.
 - **Auto-copy**: optionally copy results back to the clipboard as soon as they finish.
 - **Launch at login**: the app asks on first launch and lets you change it later in Settings.
 - **Automation API**: a small local HTTP API for scripts and tooling.

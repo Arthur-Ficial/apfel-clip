@@ -713,11 +713,27 @@ final class PopoverViewModel {
         try? await clipboardHistoryStore.save(clipboardHistory, limit: clipboardHistoryLimit)
     }
 
+    /// Password managers whose copies are kept out of history out of the box,
+    /// even when they don't stamp an NSPasteboard privacy marker. This closes
+    /// the reported gap (macOS Passwords / KeePassXC): users don't have to
+    /// discover the ignore list before their passwords stop leaking. They can
+    /// still add more apps themselves, and these are always enforced on top.
+    static let defaultSensitiveSourceBundleIDs: [String] = [
+        "com.apple.Passwords",            // macOS Passwords app
+        "org.keepassxc.keepassxc",        // KeePassXC
+        "com.1password.1password",        // 1Password 8
+        "com.agilebits.onepassword7",     // 1Password 7
+        "com.bitwarden.desktop",          // Bitwarden
+        "in.sinew.Enpass-Desktop",        // Enpass
+        "com.dashlane.dashlanephonefinal" // Dashlane
+    ]
+
     private func shouldIgnoreClipboardSourceApp() -> Bool {
         guard let bundleID = currentClipboardSourceAppBundleIdentifier, !bundleID.isEmpty else {
             return false
         }
-        return settings.ignoredClipboardSourceBundleIDs.contains {
+        let ignored = Self.defaultSensitiveSourceBundleIDs + settings.ignoredClipboardSourceBundleIDs
+        return ignored.contains {
             $0.caseInsensitiveCompare(bundleID) == .orderedSame
         }
     }

@@ -71,7 +71,7 @@ fi
 # ── Git tag + push ──────────────────────────────────────────────────────────
 print ""
 print "==> Tagging $TAG and pushing..."
-git -C "$ROOT_DIR" tag "$TAG"
+git -C "$ROOT_DIR" tag -m "${APP_NAME} ${TAG}" "$TAG"
 git -C "$ROOT_DIR" push origin main
 git -C "$ROOT_DIR" push origin "$TAG"
 

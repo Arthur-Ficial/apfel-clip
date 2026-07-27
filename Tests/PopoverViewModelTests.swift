@@ -368,6 +368,42 @@ struct PopoverViewModelTests {
         #expect(stored.isEmpty)
     }
 
+    @Test("Copies from built-in known password managers are excluded without any user config")
+    func defaultSensitiveAppClipboardHistoryIsSkipped() async throws {
+        for bundleID in ["com.apple.Passwords", "org.keepassxc.keepassxc"] {
+            let (viewModel, _, clipboard, _, clipboardHistoryStore, _, _) = makeViewModel()
+            // No ignore list configured — protection must be on out of the box.
+            viewModel.attachClipboardListener()
+
+            clipboard.currentSourceAppBundleIdentifier = bundleID
+            clipboard.currentText = "super-secret-password"
+            clipboard.refreshNow()
+            await Task.yield()
+
+            #expect(viewModel.clipboardText.isEmpty)
+            #expect(viewModel.isClipboardContentIgnoredByApp)
+            #expect(viewModel.clipboardHistory.isEmpty)
+
+            let stored = try await clipboardHistoryStore.load(limit: 40)
+            #expect(stored.isEmpty)
+        }
+    }
+
+    @Test("Ordinary apps are still captured to clipboard history")
+    func ordinaryAppClipboardHistoryIsCaptured() async throws {
+        let (viewModel, _, clipboard, _, clipboardHistoryStore, _, _) = makeViewModel()
+        viewModel.attachClipboardListener()
+
+        clipboard.currentSourceAppBundleIdentifier = "com.apple.Safari"
+        clipboard.currentText = "hello world"
+        clipboard.refreshNow()
+        await Task.yield()
+
+        #expect(viewModel.clipboardHistory.map(\.text) == ["hello world"])
+        let stored = try await clipboardHistoryStore.load(limit: 40)
+        #expect(stored.map(\.text) == ["hello world"])
+    }
+
     @Test("Removing a clipboard history item updates total and persistence")
     func removeClipboardHistoryEntry() async throws {
         let (viewModel, _, _, _, clipboardHistoryStore, _, _) = makeViewModel()
