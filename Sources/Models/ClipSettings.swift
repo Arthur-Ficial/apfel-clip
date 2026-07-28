@@ -112,6 +112,12 @@ struct ClipSettings: Codable, Equatable, Sendable {
     var actionOrder: [String] = []
     var checkForUpdatesOnLaunch: Bool = true
     var lastSeenVersion: String = ""
+    /// The `NSPasteboard.changeCount` of the most recent clipboard payload that
+    /// was detected as sensitive (privacy marker) or ignored-by-app. Persisted so
+    /// that after an app restart — when source-app provenance is gone but the same
+    /// payload is still on the pasteboard — we keep hiding it instead of leaking a
+    /// password onto the Action tab (issue #11).
+    var lastSensitiveClipboardChangeCount: Int? = nil
 
     init(
         hotkey: HotkeyConfig = HotkeyConfig(),
@@ -127,7 +133,8 @@ struct ClipSettings: Codable, Equatable, Sendable {
         savedCustomActions: [SavedCustomAction] = [],
         actionOrder: [String] = [],
         checkForUpdatesOnLaunch: Bool = true,
-        lastSeenVersion: String = ""
+        lastSeenVersion: String = "",
+        lastSensitiveClipboardChangeCount: Int? = nil
     ) {
         self.hotkey = hotkey
         self.autoCopy = autoCopy
@@ -143,6 +150,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
         self.actionOrder = actionOrder
         self.checkForUpdatesOnLaunch = checkForUpdatesOnLaunch
         self.lastSeenVersion = lastSeenVersion
+        self.lastSensitiveClipboardChangeCount = lastSensitiveClipboardChangeCount
     }
 
     init(from decoder: Decoder) throws {
@@ -166,6 +174,7 @@ struct ClipSettings: Codable, Equatable, Sendable {
         actionOrder = try container.decodeIfPresent([String].self, forKey: .actionOrder) ?? []
         checkForUpdatesOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .checkForUpdatesOnLaunch) ?? true
         lastSeenVersion = try container.decodeIfPresent(String.self, forKey: .lastSeenVersion) ?? ""
+        lastSensitiveClipboardChangeCount = try container.decodeIfPresent(Int.self, forKey: .lastSensitiveClipboardChangeCount)
     }
 
     static func clampClipboardHistoryLimit(_ value: Int) -> Int {

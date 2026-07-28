@@ -223,11 +223,32 @@ final class PopoverViewModel {
         let rawText = clipboardService.currentText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         currentClipboardSourceAppBundleIdentifier = clipboardService.currentSourceAppBundleIdentifier
         currentClipboardSourceAppName = clipboardService.currentSourceAppName
-        isClipboardContentSensitive = clipboardService.isCurrentClipboardSensitive && !rawText.isEmpty
-        isClipboardContentIgnoredByApp = shouldIgnoreClipboardSourceApp() && !rawText.isEmpty
+
+        let markerSensitive = clipboardService.isCurrentClipboardSensitive && !rawText.isEmpty
+        let ignoredByApp = shouldIgnoreClipboardSourceApp() && !rawText.isEmpty
+
+        // Source-app provenance (frontmostApplication at copy time) is lost when
+        // apfel-clip restarts, so an ignored app's password would reappear in
+        // plain text on relaunch. NSPasteboard.changeCount survives our restart,
+        // so if the current payload is the same one we previously flagged
+        // sensitive, keep hiding it even though we can no longer see the source
+        // app or a privacy marker (issue #11).
+        let changeCount = clipboardService.currentChangeCount
+        let rememberedSensitive = !rawText.isEmpty
+            && settings.lastSensitiveClipboardChangeCount == changeCount
+
+        isClipboardContentSensitive = markerSensitive || rememberedSensitive
+        isClipboardContentIgnoredByApp = ignoredByApp
         let text = (isClipboardContentSensitive || isClipboardContentIgnoredByApp) ? "" : rawText
         clipboardText = text
         contentType = text.isEmpty ? .text : ContentDetector.detect(text)
+
+        // Remember a freshly-detected sensitive/ignored payload so a later restart
+        // recognises it. Keyed by changeCount, which is unique per pasteboard write.
+        if (markerSensitive || ignoredByApp), settings.lastSensitiveClipboardChangeCount != changeCount {
+            settings.lastSensitiveClipboardChangeCount = changeCount
+            Task { await persistSettings() }
+        }
 
         if screen == .actions || screen == .customPrompt {
             if text.isEmpty {

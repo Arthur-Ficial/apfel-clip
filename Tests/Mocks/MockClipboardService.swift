@@ -5,6 +5,7 @@ import Foundation
 final class MockClipboardService: ClipboardService {
     var currentText: String?
     var isCurrentClipboardSensitive = false
+    var currentChangeCount: Int = 0
     var currentSourceAppBundleIdentifier: String?
     var currentSourceAppName: String?
     var onExternalChange: ((String?) -> Void)?
