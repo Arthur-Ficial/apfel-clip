@@ -13,6 +13,9 @@ final class PasteboardClipboardService: ClipboardService {
     var isCurrentClipboardSensitive: Bool {
         Self.shouldIgnoreHistory(for: NSPasteboard.general.types)
     }
+    var currentChangeCount: Int {
+        NSPasteboard.general.changeCount
+    }
     var currentSourceAppBundleIdentifier: String?
     var currentSourceAppName: String?
     var onExternalChange: ((String?) -> Void)?

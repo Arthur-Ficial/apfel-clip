@@ -368,6 +368,95 @@ struct PopoverViewModelTests {
         #expect(stored.isEmpty)
     }
 
+    private func makeViewModel(
+        clipboard: MockClipboardService,
+        settingsStore: MockSettingsStore
+    ) -> PopoverViewModel {
+        PopoverViewModel(
+            actionExecutor: MockActionExecutor(),
+            clipboardService: clipboard,
+            historyStore: MockHistoryStore(),
+            clipboardHistoryStore: MockClipboardHistoryStore(),
+            settingsStore: settingsStore,
+            launchAtLoginController: MockLaunchAtLoginController(),
+            installedClipboardSourceAppsProvider: { [] },
+            clipboardSourceAppURLResolver: { _ in nil }
+        )
+    }
+
+    @Test("A password from an ignored app stays hidden after an app restart (issue #11)")
+    func ignoredAppSensitivitySurvivesRestart() async throws {
+        // Shared persisted settings store models on-disk persistence across restarts.
+        let settingsStore = MockSettingsStore()
+        await settingsStore.save(ClipSettings(ignoredClipboardSourceBundleIDs: ["org.keepassxc.keepassxc"]))
+        let secret = "correct-horse-battery-staple"
+        let changeCount = 42
+
+        // ── Session 1: app running, user copies a password from KeePassXC ──
+        let clipboard1 = MockClipboardService()
+        let vm1 = makeViewModel(clipboard: clipboard1, settingsStore: settingsStore)
+        await vm1.loadPersistedState()
+
+        clipboard1.currentSourceAppBundleIdentifier = "org.keepassxc.keepassxc"
+        clipboard1.currentSourceAppName = "KeePassXC"
+        clipboard1.currentText = secret
+        clipboard1.currentChangeCount = changeCount
+        // KeePassXC does not stamp an NSPasteboard privacy marker — that is the
+        // whole reason the ignore-list mechanism exists.
+        clipboard1.isCurrentClipboardSensitive = false
+        vm1.refreshFromClipboard()
+
+        #expect(vm1.clipboardText.isEmpty)              // hidden while running
+        #expect(vm1.isClipboardContentIgnoredByApp)
+
+        // The sensitive changeCount must be persisted (fire-and-forget) so a
+        // relaunch can recognise the still-present payload.
+        for _ in 0..<100 {
+            if await settingsStore.load().lastSensitiveClipboardChangeCount == changeCount { break }
+            await Task.yield()
+        }
+        #expect(await settingsStore.load().lastSensitiveClipboardChangeCount == changeCount)
+
+        // ── Restart: provenance is gone (frontmost-app info does not survive a
+        //     relaunch) but the same password is still on the pasteboard. ──
+        let clipboard2 = MockClipboardService()
+        clipboard2.currentSourceAppBundleIdentifier = nil
+        clipboard2.currentSourceAppName = nil
+        clipboard2.currentText = secret
+        clipboard2.currentChangeCount = changeCount     // unchanged system pasteboard
+        clipboard2.isCurrentClipboardSensitive = false
+
+        let vm2 = makeViewModel(clipboard: clipboard2, settingsStore: settingsStore)
+        await vm2.loadPersistedState()
+        vm2.refreshFromClipboard()
+
+        // Regression from issue #11: the password reappeared in plain text on the
+        // Action tab after restart. It must stay hidden.
+        #expect(vm2.clipboardText.isEmpty, "Password must stay hidden after restart")
+        #expect(vm2.isClipboardContentSensitive || vm2.isClipboardContentIgnoredByApp)
+    }
+
+    @Test("A new, non-sensitive copy after restart is shown normally (issue #11 guard)")
+    func nonSensitiveCopyAfterRestartIsShown() async throws {
+        let settingsStore = MockSettingsStore()
+        // Persisted sensitive marker from a previous session's password copy.
+        await settingsStore.save(ClipSettings(lastSensitiveClipboardChangeCount: 42))
+
+        let clipboard = MockClipboardService()
+        clipboard.currentSourceAppBundleIdentifier = nil
+        clipboard.currentText = "just some ordinary text"
+        clipboard.currentChangeCount = 43               // clipboard changed since the password
+        clipboard.isCurrentClipboardSensitive = false
+
+        let vm = makeViewModel(clipboard: clipboard, settingsStore: settingsStore)
+        await vm.loadPersistedState()
+        vm.refreshFromClipboard()
+
+        #expect(vm.clipboardText == "just some ordinary text")
+        #expect(!vm.isClipboardContentSensitive)
+        #expect(!vm.isClipboardContentIgnoredByApp)
+    }
+
     @Test("Copies from built-in known password managers are excluded without any user config")
     func defaultSensitiveAppClipboardHistoryIsSkipped() async throws {
         for bundleID in ["com.apple.Passwords", "org.keepassxc.keepassxc"] {
